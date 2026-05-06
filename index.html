@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,71 +7,57 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg-deep:#04070A;--bg-card:#080C11;--bg-elevated:#0C1119;
-      --border:#131D2A;--border-active:#1B3A2A;
-      --text-main:#E6EDF3;--text-dim:#7D8590;--text-faint:#484F58;
-      --green:#2EA043;--green-glow:#3FB950;--red:#DA3633;--red-glow:#F85149;--orange:#D29922;--yellow:#E3B341;
-      --font-mono:'IBM Plex Mono',monospace;--font-sans:'Inter',-apple-system,sans-serif;
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg-deep);color:var(--text-main);font-family:var(--font-sans);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
-    .header{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;background:var(--bg-elevated);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(16px)}
-    .header-brand{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-weight:700;font-size:17px;letter-spacing:1.5px;color:var(--green-glow)}
-    .header-brand span{font-weight:400;font-size:11px;color:var(--text-dim);letter-spacing:1px}
-    .header-status{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-dim);font-family:var(--font-mono)}
-    .indicator{width:8px;height:8px;border-radius:50%;background:var(--green-glow);box-shadow:0 0 8px var(--green-glow);animation:pulse 2s infinite}
-    .indicator.warn{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:none}
-    .indicator.danger{background:var(--red-glow);box-shadow:0 0 8px var(--red-glow);animation:blink .5s infinite}
+    :root{--bg:#04070A;--card:#080C11;--border:#131D2A;--text:#E6EDF3;--dim:#7D8590;--faint:#484F58;--green:#3FB950;--red:#F85149;--orange:#D29922;--yellow:#E3B341;--mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .logo{font-family:var(--mono);font-weight:700;font-size:17px;letter-spacing:1.5px;color:var(--green)}
+    .logo span{font-weight:400;font-size:11px;color:var(--dim)}
+    .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);font-family:var(--mono)}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+    .dot.warn{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:none}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-    .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;padding:20px 28px;max-width:1300px;width:100%;margin:0 auto;flex:1}
-    @media(max-width:880px){.grid{grid-template-columns:1fr;padding:12px 14px}}
-    .card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .25s}
-    .card:hover{border-color:#1F3140}
+    .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;padding:20px 24px;max-width:1300px;width:100%;margin:0 auto;flex:1}
+    @media(max-width:880px){.grid{grid-template-columns:1fr;padding:12px}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
     .card.full{grid-column:1/-1}
-    .card-label{font-family:var(--font-mono);font-size:10px;letter-spacing:2.5px;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;font-weight:600}
-    .chart-wrap{height:310px;background:#010306;border-radius:10px;border:1px solid #0A1520;padding:2px;overflow:hidden}
+    .label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--faint);text-transform:uppercase;margin-bottom:12px;font-weight:600}
+    .chart-wrap{height:300px;background:#020408;border-radius:8px;border:1px solid #0A1520;padding:4px}
     canvas{width:100%!important;height:100%!important}
-    .bpm-block{text-align:center;padding:8px 0}
-    .bpm-number{font-family:var(--font-mono);font-size:72px;font-weight:700;line-height:1;transition:color .4s;letter-spacing:-3px}
-    .bpm-label{font-size:12px;color:var(--text-faint);margin-top:4px;letter-spacing:2px}
-    .bpm-footer{font-size:11px;color:var(--text-faint);margin-top:10px;font-family:var(--font-mono)}
-    .diag-badge{display:block;padding:10px 18px;border-radius:24px;font-weight:600;font-size:12px;letter-spacing:.5px;text-align:center;width:100%}
-    .diag-notes{font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.7;background:#03060A;padding:12px;border-radius:8px;font-family:var(--font-mono);white-space:pre-line}
-    .btn{display:block;width:100%;padding:11px 16px;border-radius:8px;font-weight:600;font-size:12px;letter-spacing:.8px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--font-sans);margin-top:10px;text-align:center}
-    .btn-start{background:#0A1F12;color:var(--green-glow);border-color:#153520}
-    .btn-start:hover{background:#0E2818}
-    .btn-start.on{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 0 16px rgba(46,160,67,.35)}
+    .bpm-block{text-align:center;padding:10px 0}
+    .bpm-num{font-family:var(--mono);font-size:68px;font-weight:700;line-height:1;transition:color .4s}
+    .bpm-sub{font-size:11px;color:var(--faint);margin-top:4px;letter-spacing:2px}
+    .bpm-info{font-size:10px;color:var(--faint);margin-top:8px;font-family:var(--mono)}
+    .diag-badge{display:block;padding:10px 16px;border-radius:24px;font-weight:600;font-size:12px;text-align:center;width:100%}
+    .diag-detail{font-size:10px;color:var(--dim);margin-top:10px;line-height:1.7;background:#03060A;padding:10px;border-radius:8px;font-family:var(--mono);white-space:pre-line}
+    .btn{display:block;width:100%;padding:10px 14px;border-radius:6px;font-weight:600;font-size:12px;letter-spacing:.5px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--sans);margin-top:8px;text-align:center}
+    .btn-start{background:#0A1F12;color:var(--green);border-color:#153520}
+    .btn-start.on{background:var(--green);color:#000;border-color:var(--green);box-shadow:0 0 14px rgba(63,185,80,.3)}
     .btn-mute{background:#1A0A0A;color:var(--red);border-color:#2D1010;display:none}
-    .btn-mute:hover{background:#240E0E}
-    .btn-print{background:var(--bg-elevated);color:var(--text-dim);border-color:var(--border);font-weight:500}
-    .btn-print:hover{background:#131A24}
-    .table-scroll{max-height:180px;overflow-y:auto}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{padding:10px 8px;text-align:left;color:var(--text-faint);font-weight:600;font-size:10px;letter-spacing:1px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card);z-index:1}
-    td{padding:10px 8px;border-bottom:1px solid #0A1118;color:var(--text-dim)}
-    tr:hover td{background:rgba(255,255,255,.012)}
+    .btn-print{background:#0A0D12;color:var(--dim);border-color:var(--border)}
+    .table-wrap{max-height:160px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:10px}
+    th{padding:8px 6px;text-align:left;color:var(--faint);font-weight:600;font-size:9px;letter-spacing:1px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card)}
+    td{padding:8px 6px;border-bottom:1px solid #0A1118;color:var(--dim)}
     .alarm-flash{animation:alarmPulse .55s infinite}
-    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(218,54,51,0)}50%{box-shadow:inset 0 0 100px rgba(218,54,51,.45)}}
-    @media print{body{background:#fff;color:#000}.header,.btn,.bpm-block{display:none}.grid{display:block;padding:0}.card{border:1px solid #ccc;margin-bottom:10px;break-inside:avoid}.chart-wrap{height:240px}.card-label,.diag-notes{color:#333}}
+    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(248,81,73,0)}50%{box-shadow:inset 0 0 80px rgba(248,81,73,.4)}}
+    @media print{body{background:#fff;color:#000}.header,.btn,.bpm-block{display:none}.grid{display:block;padding:0}.card{border:1px solid #ccc;margin-bottom:10px}.chart-wrap{height:220px}}
   </style>
 </head>
 <body>
   <header class="header">
-    <div class="header-brand">🫀 HEART SENSOR <span>| Clinical Monitor</span></div>
-    <div class="header-status"><div class="indicator" id="led"></div><span id="ledText">Connecting…</span></div>
+    <div class="logo">🫀 HEART SENSOR <span>| Clinical Monitor</span></div>
+    <div class="status"><div class="dot" id="led"></div><span id="ledText">Connecting…</span></div>
   </header>
-  <main class="grid" id="dashboard">
-    <div class="card full"><div class="card-label">ECG — Lead II · 25 mm/s</div><div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div></div>
-    <div class="card"><div class="card-label">Heart Rate</div><div class="bpm-block"><div class="bpm-number" id="bpmDisplay">---</div><div class="bpm-label">B P M</div></div><div class="bpm-footer" id="bpmMeta">Awaiting signal…</div></div>
-    <div class="card"><div class="card-label">AI Diagnosis</div><div class="diag-badge" id="diagBadge" style="background:#10161C;color:var(--text-faint)">NO SIGNAL</div><div class="diag-notes" id="diagNotes">Waiting for stable ECG data…</div><button class="btn btn-start" id="btnMonitor" onclick="toggleMonitor()">▶ START MONITORING</button><button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 MUTE ALARM</button></div>
-    <div class="card full"><div class="card-label">Patient History — Last 10 Records</div><div class="table-scroll"><table><thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Conf.</th></tr></thead><tbody id="historyBody"><tr><td colspan="5" style="color:var(--text-faint)">Loading records…</td></tr></tbody></table></div><button class="btn btn-print" onclick="window.print()" style="margin-top:12px">🖨 PRINT ECG REPORT</button></div>
+  <main class="grid" id="dash">
+    <div class="card full"><div class="label">ECG — Lead II · 25 mm/s</div><div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div></div>
+    <div class="card"><div class="label">Heart Rate</div><div class="bpm-block"><div class="bpm-num" id="bpmDisp">---</div><div class="bpm-sub">B P M</div></div><div class="bpm-info" id="bpmMeta">Awaiting signal…</div></div>
+    <div class="card"><div class="label">AI Diagnosis</div><div class="diag-badge" id="diagBadge" style="background:#10161C;color:var(--faint)">NO SIGNAL</div><div class="diag-detail" id="diagDetail">Waiting for stable ECG data…</div><button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ START MONITORING</button><button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 MUTE</button></div>
+    <div class="card full"><div class="label">Patient History</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Conf.</th></tr></thead><tbody id="histBody"><tr><td colspan="5" style="color:var(--faint)">Loading…</td></tr></tbody></table></div><button class="btn btn-print" onclick="window.print()" style="margin-top:10px">🖨 PRINT REPORT</button></div>
   </main>
+
   <script>
     (function(){
       firebase.initializeApp({
@@ -81,10 +67,15 @@
         projectId:"sensor-7042b"
       });
       const rtdb=firebase.database();
-      const BUFFER=600,FS=5;
-      let buf=[],monitoring=false,muted=false,audioCtx=null,smBpm=0,alarmT=null;
+
+      const FS=5, MAX=600;
+      let buf=[], monitoring=false, muted=false, audioCtx=null, smBpm=0, alarmT=null;
+      let yMin=null, yMax=null;
+
       const $=id=>document.getElementById(id);
-      const led=$('led'),ledTxt=$('ledText'),bpmD=$('bpmDisplay'),bpmM=$('bpmMeta'),dBadge=$('diagBadge'),dNotes=$('diagNotes'),btnM=$('btnMonitor'),btnMu=$('btnMute'),hBody=$('historyBody'),dash=$('dashboard');
+      const led=$('led'),ledTxt=$('ledText'),bpmD=$('bpmDisp'),bpmM=$('bpmMeta');
+      const dBadge=$('diagBadge'),dDetail=$('diagDetail'),btnMon=$('btnMon'),btnMute=$('btnMute'),histBody=$('histBody'),dash=$('dash');
+
       const ctx=$('ecgCanvas').getContext('2d');
       const chart=new Chart(ctx,{
         type:'line',
@@ -99,22 +90,22 @@
         }
       });
 
-      function peaks(sig,fs){
+      function findPeaks(sig,fs){
         if(sig.length<fs*2) return [];
         const avg=sig.reduce((a,b)=>a+b,0)/sig.length;
-        const thr=avg,minD=Math.floor(fs*.4);
+        const thr=avg, minDist=Math.floor(fs*.4);
         const p=[];
         for(let i=1;i<sig.length-1;i++){
           if(sig[i]<thr) continue;
           if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1]) continue;
-          if(p.length&&i-p[p.length-1]<minD) continue;
+          if(p.length&&i-p[p.length-1]<minDist) continue;
           p.push(i);
         }
         return p;
       }
 
-      function bpm(sig,fs){
-        const p=peaks(sig,fs);
+      function calcBPM(sig,fs){
+        const p=findPeaks(sig,fs);
         if(p.length<2) return 0;
         const rr=[];
         for(let i=1;i<p.length;i++) rr.push(p[i]-p[i-1]);
@@ -125,54 +116,70 @@
       rtdb.ref('/patient').on('value',snap=>{
         const d=snap.val();
         if(!d) return;
-        const v=d.ecg_value??0,s=d.status??'disconnected';
+        const v=d.ecg_value??0, s=d.status??'disconnected';
+
         if(s==='ok'&&v!==0){
-          led.className='indicator';ledTxt.textContent='Live';
+          led.className='dot';ledTxt.textContent='Live';
         } else {
-          led.className='indicator warn';ledTxt.textContent='Leads Off';
-          if(monitoring) diag('NO_SIGNAL',0);
+          led.className='dot warn';ledTxt.textContent='Leads Off';
+          if(monitoring) setDiag('NO_SIGNAL',0);
           return;
         }
+
         buf.push(v);
-        if(buf.length>BUFFER) buf.shift();
+        if(buf.length>MAX) buf.shift();
+
         chart.data.datasets[0].data=[...buf];
+
+        // AUTO-SCALE Y-AXIS — FIXED
         if(buf.length>10){
           const seg=buf.slice(-300);
-          const min=Math.min(...seg),max=Math.max(...seg);
-          const pad=Math.max((max-min)*.3,60);
-          chart.options.scales.y.min=min-pad;
-          chart.options.scales.y.max=max+pad;
+          const min=Math.min(...seg);
+          const max=Math.max(...seg);
+          const range=max-min || 60;
+          const pad=range*0.4;
+          const newMin=min-pad;
+          const newMax=max+pad;
+          
+          // Smooth scale transitions
+          if(yMin===null){yMin=newMin;yMax=newMax;}
+          else {yMin=yMin*.7+newMin*.3;yMax=yMax*.7+newMax*.3;}
+          
+          chart.options.scales.y.min=yMin;
+          chart.options.scales.y.max=yMax;
         }
         chart.update('none');
+
+        // BPM
         if(buf.length>=FS*2){
-          const raw=bpm(buf.slice(-FS*3),FS);
+          const raw=calcBPM(buf.slice(-FS*3),FS);
           if(raw>25&&raw<250){
             smBpm=Math.round(smBpm*.55+raw*.45);
             bpmD.textContent=smBpm;
-            if(smBpm>=60&&smBpm<=100) bpmD.style.color='var(--green-glow)';
+            if(smBpm>=60&&smBpm<=100) bpmD.style.color='var(--green)';
             else if((smBpm>=50&&smBpm<60)||(smBpm>100&&smBpm<=120)) bpmD.style.color='var(--orange)';
-            else bpmD.style.color='var(--red-glow)';
-            if(monitoring) diag(null,smBpm);
+            else bpmD.style.color='var(--red)';
+            if(monitoring) setDiag(null,smBpm);
           }
         }
         bpmM.textContent='Last: '+new Date().toLocaleTimeString();
       });
 
-      function diag(ov,bp){
-        let l,c,bg,n;
-        if(ov==='NO_SIGNAL'){l='NO SIGNAL';c='var(--text-faint)';bg='#10161C';n='⚠ Sensor disconnected.\n→ Verify electrodes.\n→ Check AD8232.';alarm(true)}
-        else if(bp>=60&&bp<=100){l='NORMAL SINUS RHYTHM';c='var(--green-glow)';bg='#0A1F12';n=`✓ Regular: ${bp} BPM.\n✓ P-waves upright.\n✓ QRS < 120 ms.`;alarm(false)}
-        else if(bp>40&&bp<50){l='SINUS BRADYCARDIA';c='var(--orange)';bg='#1A1608';n=`⚠ ${bp} BPM — low.\n→ Check if symptomatic.`;alarm(true)}
-        else if(bp>100&&bp<=120){l='SINUS TACHYCARDIA';c='var(--orange)';bg='#1A1608';n=`⚠ ${bp} BPM — elevated.\n→ Possible stress/fever.`;alarm(true)}
-        else if(bp>120){l='⚠ ABNORMALITY';c='var(--red-glow)';bg='#1A0A0A';n=`⚠ Tachyarrhythmia.\n→ Irregular R-R.\n→ URGENT: ${bp} BPM.`;alarm(true)}
-        else {l='ANALYZING…';c='var(--yellow)';bg='#1A1808';n='Gathering data…';alarm(false)}
-        dBadge.textContent=l;dBadge.style.color=c;dBadge.style.background=bg;dNotes.textContent=n;
+      function setDiag(ov,bp){
+        let l,c,bg,dt;
+        if(ov==='NO_SIGNAL'){l='NO SIGNAL';c='var(--faint)';bg='#10161C';dt='⚠ Sensor disconnected.\n→ Verify electrode placement.\n→ Check AD8232 power.';alarm(true)}
+        else if(bp>=60&&bp<=100){l='NORMAL SINUS RHYTHM';c='var(--green)';bg='#0A1F12';dt=`✓ Regular rhythm: ${bp} BPM.\n✓ P-waves upright.\n✓ QRS < 120 ms.\n✓ No ectopy detected.`;alarm(false)}
+        else if(bp>40&&bp<50){l='SINUS BRADYCARDIA';c='var(--orange)';bg='#1A1608';dt=`⚠ ${bp} BPM — below normal.\n→ Check if symptomatic.\n→ May be normal in athletes.`;alarm(true)}
+        else if(bp>100&&bp<=120){l='SINUS TACHYCARDIA';c='var(--orange)';bg='#1A1608';dt=`⚠ ${bp} BPM — elevated.\n→ Possible stress, pain, fever.\n→ Evaluate underlying cause.`;alarm(true)}
+        else if(bp>120){l='⚠ ABNORMALITY DETECTED';c='var(--red)';bg='#1A0A0A';dt=`⚠ Tachyarrhythmia suspected.\n→ Irregular R-R intervals.\n→ URGENT evaluation needed.\n→ Rate: ${bp} BPM.`;alarm(true)}
+        else {l='ANALYZING…';c='var(--yellow)';bg='#1A1808';dt='Gathering data for analysis…';alarm(false)}
+        dBadge.textContent=l;dBadge.style.color=c;dBadge.style.background=bg;dDetail.textContent=dt;
       }
 
       function alarm(on){
         dash.classList.toggle('alarm-flash',on);
         if(on&&!muted) beep();
-        else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend()}
+        else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();}
       }
 
       function beep(){
@@ -180,28 +187,28 @@
           if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
           if(audioCtx.state==='suspended') audioCtx.resume();
           const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-          o.type='square';o.frequency.value=880;g.gain.value=.22;
+          o.type='square';o.frequency.value=880;g.gain.value=.2;
           o.connect(g);g.connect(audioCtx.destination);
           o.start();setTimeout(()=>o.stop(),120);
-          alarmT=setTimeout(()=>{if(dash.classList.contains('alarm-flash')) beep()},350);
+          alarmT=setTimeout(()=>{if(dash.classList.contains('alarm-flash')) beep();},350);
         }catch(e){}
       }
 
-      window.toggleMonitor=function(){
+      window.toggleMon=function(){
         monitoring=!monitoring;
-        if(monitoring){btnM.textContent='⏸ STOP MONITORING';btnM.classList.add('on');btnMu.style.display='block';bpmM.textContent='Monitoring…'}
-        else {btnM.textContent='▶ START MONITORING';btnM.classList.remove('on');btnMu.style.display='none';dash.classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();bpmM.textContent='Paused'}
+        if(monitoring){btnMon.textContent='⏸ STOP MONITORING';btnMon.classList.add('on');btnMute.style.display='block';bpmM.textContent='Monitoring…'}
+        else {btnMon.textContent='▶ START MONITORING';btnMon.classList.remove('on');btnMute.style.display='none';dash.classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();bpmM.textContent='Paused';}
       };
 
       window.toggleMute=function(){
-        muted=!muted;btnMu.textContent=muted?'🔊 UNMUTE':'🔇 MUTE ALARM';
+        muted=!muted;btnMute.textContent=muted?'🔊 UNMUTE':'🔇 MUTE';
         if(muted&&audioCtx&&audioCtx.state==='running') audioCtx.suspend();
       };
 
       rtdb.ref('/patient_history').on('value',snap=>{
         const d=snap.val();
-        if(!d){hBody.innerHTML='<tr><td colspan="5" style="color:var(--text-faint)">No records</td></tr>';return}
-        hBody.innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
+        if(!d){histBody.innerHTML='<tr><td colspan="5" style="color:var(--faint)">No records</td></tr>';return;}
+        histBody.innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
       });
     })();
   </script>
