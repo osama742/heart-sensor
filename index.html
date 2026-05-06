@@ -3,44 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heart Sensor - مراقبة القلب عن بعد</title>
+  <title>Heart Sensor - مراقبة القلب</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#f0f2f5;--card:#fff;--border:#d1d5db;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--text:#1f2937;--dim:#6b7280;--mono:'IBM Plex Mono',monospace;--arabic:'Tajawal',sans-serif}
+    :root{--bg:#f5f5f5;--card:#fff;--border:#e0e0e0;--green:#2e7d32;--red:#c62828;--orange:#ef6c00;--text:#212121;--dim:#757575;--mono:'IBM Plex Mono',monospace;--arabic:'Tajawal',sans-serif}
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:var(--arabic);min-height:100vh}
-    .header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:#fff;border-bottom:2px solid #e5e7eb;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border-bottom:2px solid var(--green);position:sticky;top:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.05)}
     .logo{font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);display:flex;align-items:center;gap:8px}
     .logo span{font-weight:400;font-size:11px;color:var(--dim)}
     .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);font-family:var(--mono)}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+    .dot.warn{background:var(--orange);animation:none}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .grid{display:grid;grid-template-columns:1fr;gap:16px;padding:20px 24px;max-width:1200px;margin:0 auto}
-    .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px;padding:16px 20px;max-width:1100px;margin:0 auto}
+    .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
     @media(max-width:768px){.row2{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .card-label{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:12px;font-weight:600}
-    .chart-wrap{height:350px;background:#fafafa;border-radius:12px;border:1px solid #e5e7eb;padding:6px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .card-label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;font-weight:600}
+    .chart-wrap{height:320px;background:#fafafa;border-radius:8px;border:1px solid #e0e0e0;padding:4px}
     canvas{width:100%!important;height:100%!important}
-    .bpm-block{text-align:center;padding:8px 0}
-    .bpm-num{font-family:var(--mono);font-size:80px;font-weight:700;line-height:1}
+    .bpm-block{text-align:center;padding:10px 0}
+    .bpm-num{font-family:var(--mono);font-size:72px;font-weight:700;line-height:1}
     .bpm-sub{font-size:12px;color:var(--dim);margin-top:4px}
-    .diag-badge{display:block;padding:10px 16px;border-radius:24px;font-weight:700;font-size:13px;text-align:center;width:100%}
-    .diag-detail{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7;background:#f9fafb;padding:10px;border-radius:8px;font-family:var(--mono);white-space:pre-line}
-    .btn{display:block;width:100%;padding:11px 14px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--arabic);margin-top:8px;text-align:center}
-    .btn-start{background:#16a34a;color:#fff}
-    .btn-start:hover{background:#15803d}
-    .btn-start.on{background:#dc2626}
-    .btn-mute{background:#fef2f2;color:#dc2626;border-color:#fecaca;display:none}
-    .btn-print{background:#f3f4f6;color:var(--dim);border-color:var(--border)}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th{padding:10px 8px;text-align:right;color:var(--dim);font-weight:600;font-size:10px;letter-spacing:.5px;border-bottom:2px solid #e5e7eb}
-    td{padding:10px 8px;border-bottom:1px solid #f3f4f6;color:var(--text)}
+    .diag-badge{display:block;padding:10px 14px;border-radius:20px;font-weight:700;font-size:12px;text-align:center;width:100%}
+    .diag-detail{font-size:10px;color:var(--dim);margin-top:8px;line-height:1.7;background:#fafafa;padding:8px;border-radius:6px;font-family:var(--mono);white-space:pre-line}
+    .btn{display:block;width:100%;padding:10px 14px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--arabic);margin-top:8px;text-align:center}
+    .btn-start{background:var(--green);color:#fff}
+    .btn-start.on{background:var(--red)}
+    .btn-mute{background:#fef2f2;color:var(--red);border-color:#fecaca;display:none}
+    .btn-print{background:#f5f5f5;color:var(--dim);border-color:var(--border)}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{padding:10px 6px;text-align:right;color:var(--dim);font-weight:600;font-size:9px;letter-spacing:.5px;border-bottom:2px solid #e0e0e0}
+    td{padding:8px 6px;border-bottom:1px solid #f0f0f0;color:var(--text)}
     .alarm-flash{animation:alarmPulse .55s infinite}
-    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(220,38,38,0)}50%{box-shadow:inset 0 0 60px rgba(220,38,38,.15)}}
+    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(198,40,40,0)}50%{box-shadow:inset 0 0 60px rgba(198,40,40,.12)}}
     @media print{body{background:#fff!important}.header,.btn,.no-print{display:none!important}.card{box-shadow:none;border:1px solid #ccc}.chart-wrap{height:300px}}
   </style>
 </head>
@@ -53,7 +53,7 @@
 
 <main class="grid" id="dash">
   <div class="card">
-    <div class="card-label">تخطيط القلب — Lead II · 25 mm/s</div>
+    <div class="card-label">تخطيط القلب — ECG · Lead II · 25 mm/s</div>
     <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
   </div>
 
@@ -64,12 +64,12 @@
     </div>
     <div class="card">
       <div class="card-label">حالة الإشارة</div>
-      <div style="text-align:center;padding:30px 0;font-size:48px" id="signalIcon">🫀</div>
-      <div style="text-align:center;font-weight:700;color:var(--green)" id="signalText">متصل</div>
+      <div style="text-align:center;padding:20px 0;font-size:40px" id="signalIcon">🫀</div>
+      <div style="text-align:center;font-weight:700;font-size:14px" id="signalText">متصل</div>
     </div>
     <div class="card">
-      <div class="card-label">تحليل الذكاء الاصطناعي 🤖</div>
-      <div class="diag-badge" id="diagBadge" style="background:#f3f4f6;color:var(--dim)">لا توجد إشارة</div>
+      <div class="card-label">تحليل الذكاء الاصطناعي</div>
+      <div class="diag-badge" id="diagBadge" style="background:#f5f5f5;color:var(--dim)">لا توجد إشارة</div>
       <div class="diag-detail" id="diagDetail">بانتظار بيانات ECG…</div>
       <button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ بدء المراقبة</button>
       <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 كتم الصوت</button>
@@ -92,76 +92,67 @@
     projectId:"sensor-7042b"
   });
   const rtdb=firebase.database();
-
   const FS=5,MAX=500;
-  let buf=[],mon=false,muted=false,audioCtx=null,smBpm=0,alarmT=null;
-  let yMin=1700,yMax=1900;
+  let buf=[],mon=false,muted=false,audioCtx=null,smBpm=0,alarmT=null,yMin=1700,yMax=1900;
   const $=id=>document.getElementById(id);
-  const led=$('led'),ledTxt=$('ledText'),bpmD=$('bpmDisp'),signalIcon=$('signalIcon'),signalText=$('signalText');
-  const dBadge=$('diagBadge'),dDetail=$('diagDetail'),btnMon=$('btnMon'),btnMute=$('btnMute'),histBody=$('histBody'),dash=$('dash');
 
   const ctx=$('ecgCanvas').getContext('2d');
   const chart=new Chart(ctx,{
-    type:'line',
-    data:{labels:[],datasets:[{data:[],borderColor:'#dc2626',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,animation:false,
-      scales:{
-        x:{display:false,grid:{color:'#e5e7eb'}},
-        y:{min:1700,max:1900,grid:{color:'#e5e7eb'},ticks:{display:false}}
-      },
-      plugins:{legend:{display:false}}
-    }
+    type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#c62828',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,scales:{x:{display:false,grid:{color:'#e0e0e0'}},y:{min:1700,max:1900,grid:{color:'#e0e0e0'},ticks:{display:false}}},plugins:{legend:{display:false}}}
   });
 
-  function calcBPM(sig){
-    if(sig.length<10) return 0;
-    let sum=0;for(let i=0;i<sig.length;i++) sum+=sig[i];
-    const thr=sum/sig.length, minD=2, peaks=[];
+  function peaks(sig){
+    if(sig.length<10) return[];
+    let s=0;for(let i=0;i<sig.length;i++)s+=sig[i];
+    const thr=s/sig.length,p=[];
     for(let i=1;i<sig.length-1;i++){
-      if(sig[i]<=thr) continue;
-      if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1]) continue;
-      if(peaks.length&&i-peaks[peaks.length-1]<minD) continue;
-      peaks.push(i);
+      if(sig[i]<=thr)continue;
+      if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1])continue;
+      if(p.length&&i-p[p.length-1]<2)continue;
+      p.push(i);
     }
-    if(peaks.length<2) return 0;
+    return p;
+  }
+
+  function bpm(sig){
+    const p=peaks(sig);
+    if(p.length<2)return 0;
     const rr=[];
-    for(let i=1;i<peaks.length;i++) rr.push((peaks[i]-peaks[i-1])/FS);
+    for(let i=1;i<p.length;i++)rr.push((p[i]-p[i-1])/FS);
     const avg=rr.reduce((a,b)=>a+b,0)/rr.length;
-    const bpm=Math.round(60/avg);
-    return(bpm>20&&bpm<250)?bpm:0;
+    const v=Math.round(60/avg);
+    return(v>20&&v<250)?v:0;
   }
 
   rtdb.ref('/patient').on('value',snap=>{
     const d=snap.val();
-    if(!d) return;
-    const v=d.ecg_value??0, s=d.status??'disconnected';
+    if(!d)return;
+    const v=d.ecg_value??0,s=d.status??'disconnected';
     if(s==='ok'&&v!==0){
-      led.style.background='var(--green)';ledTxt.textContent='متصل — مباشر';
-      signalIcon.textContent='🫀';signalIcon.style.opacity=1;signalText.textContent='متصل';signalText.style.color='var(--green)';
-    } else {
-      led.style.background='var(--orange)';ledTxt.textContent='الأقطاب منفصلة';
-      signalIcon.style.opacity=0.4;signalText.textContent='منفصل';signalText.style.color='var(--red)';
+      $('led').className='dot';$('ledText').textContent='متصل — مباشر';
+      $('signalIcon').style.opacity=1;$('signalText').textContent='متصل';$('signalText').style.color='var(--green)';
+    }else{
+      $('led').className='dot warn';$('ledText').textContent='الأقطاب منفصلة';
+      $('signalIcon').style.opacity=.4;$('signalText').textContent='منفصل';$('signalText').style.color='var(--red)';
       if(mon) setDiag('NO_SIGNAL',0);
       return;
     }
-    buf.push(v);if(buf.length>MAX) buf.shift();
+    buf.push(v);if(buf.length>MAX)buf.shift();
     chart.data.datasets[0].data=[...buf];
     if(buf.length>10){
-      const seg=buf.slice(-200);
-      const min=Math.min(...seg),max=Math.max(...seg);
-      const pad=Math.max((max-min)*.3,50);
+      const seg=buf.slice(-200),min=Math.min(...seg),max=Math.max(...seg),pad=Math.max((max-min)*.3,50);
       yMin=yMin*.7+(min-pad)*.3;yMax=yMax*.7+(max+pad)*.3;
       chart.options.scales.y.min=Math.floor(yMin/10)*10;
       chart.options.scales.y.max=Math.ceil(yMax/10)*10;
     }
     chart.update('none');
     if(buf.length>=FS*3){
-      const raw=calcBPM(buf.slice(-FS*3));
-      if(raw>0){smBpm=Math.round(smBpm*.5+raw*.5);bpmD.textContent=smBpm;
-        if(smBpm>=60&&smBpm<=100) bpmD.style.color='var(--green)';
-        else if(smBpm<50||smBpm>120) bpmD.style.color='var(--red)';
-        else bpmD.style.color='var(--orange)';
+      const raw=bpm(buf.slice(-FS*3));
+      if(raw>0){smBpm=Math.round(smBpm*.5+raw*.5);$('bpmDisp').textContent=smBpm;
+        if(smBpm>=60&&smBpm<=100)$('bpmDisp').style.color='var(--green)';
+        else if(smBpm<50||smBpm>120)$('bpmDisp').style.color='var(--red)';
+        else $('bpmDisp').style.color='var(--orange)';
         if(mon) setDiag(null,smBpm);
       }
     }
@@ -169,44 +160,44 @@
 
   function setDiag(ov,bp){
     let l,c,bg,dt;
-    if(ov==='NO_SIGNAL'){l='لا توجد إشارة';c='var(--dim)';bg='#f3f4f6';dt='⚠ المستشعر منفصل.';alarm(true)}
-    else if(bp>=60&&bp<=100){l='إيقاع جيبي طبيعي';c='var(--green)';bg='#f0fdf4';dt=`✓ إيقاع منتظم: ${bp} نبضة/دقيقة.`;alarm(false)}
-    else if(bp>40&&bp<50){l='بطء قلب جيبي';c='var(--orange)';bg='#fff7ed';dt=`⚠ معدل منخفض: ${bp}.`;alarm(true)}
-    else if(bp>100&&bp<=120){l='تسرع قلب جيبي';c='var(--orange)';bg='#fff7ed';dt=`⚠ معدل مرتفع: ${bp}.`;alarm(true)}
-    else if(bp>120){l='⚠ اضطراب نظم القلب';c='var(--red)';bg='#fef2f2';dt=`⚠ تسرع غير طبيعي: ${bp}.`;alarm(true)}
-    else {l='جاري التحليل…';c='var(--orange)';bg='#fffbeb';dt='جمع البيانات…';alarm(false)}
-    dBadge.textContent=l;dBadge.style.color=c;dBadge.style.background=bg;dDetail.textContent=dt;
+    if(ov==='NO_SIGNAL'){l='لا توجد إشارة';c='var(--dim)';bg='#f5f5f5';dt='⚠ المستشعر منفصل.';alarm(true)}
+    else if(bp>=60&&bp<=100){l='إيقاع جيبي طبيعي';c='var(--green)';bg='#e8f5e9';dt=`✓ إيقاع منتظم: ${bp} نبضة/دقيقة.\n✓ موجات P طبيعية.\n✓ مدة QRS طبيعية.`;alarm(false)}
+    else if(bp>40&&bp<50){l='بطء قلب جيبي';c='var(--orange)';bg='#fff3e0';dt=`⚠ معدل منخفض: ${bp}.\n→ راقب الأعراض.`;alarm(true)}
+    else if(bp>100&&bp<=120){l='تسرع قلب جيبي';c='var(--orange)';bg='#fff3e0';dt=`⚠ معدل مرتفع: ${bp}.\n→ قد يكون بسبب التوتر.`;alarm(true)}
+    else if(bp>120){l='⚠ اضطراب نظم القلب';c='var(--red)';bg='#ffebee';dt=`⚠ تسرع غير طبيعي: ${bp}.\n→ ينصح بالتقييم الطبي.`;alarm(true)}
+    else {l='جاري التحليل…';c='var(--orange)';bg='#fff8e1';dt='جمع البيانات للتحليل…';alarm(false)}
+    $('diagBadge').textContent=l;$('diagBadge').style.color=c;$('diagBadge').style.background=bg;$('diagDetail').textContent=dt;
   }
 
   function alarm(on){
-    dash.classList.toggle('alarm-flash',on);
-    if(on&&!muted) beep();else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx) audioCtx.suspend();}
+    $('dash').classList.toggle('alarm-flash',on);
+    if(on&&!muted) beep();else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend();}
   }
 
   function beep(){
     try{
-      if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-      if(audioCtx.state==='suspended') audioCtx.resume();
+      if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended')audioCtx.resume();
       const o=audioCtx.createOscillator(),g=audioCtx.createGain();
       o.type='square';o.frequency.value=880;g.gain.value=.2;
       o.connect(g);g.connect(audioCtx.destination);
       o.start();setTimeout(()=>o.stop(),120);
-      alarmT=setTimeout(()=>{if(dash.classList.contains('alarm-flash')) beep();},350);
+      alarmT=setTimeout(()=>{if($('dash').classList.contains('alarm-flash'))beep();},350);
     }catch(e){}
   }
 
   window.toggleMon=function(){
     mon=!mon;
-    if(mon){btnMon.textContent='⏸ إيقاف المراقبة';btnMon.classList.add('on');btnMute.style.display='block'}
-    else {btnMon.textContent='▶ بدء المراقبة';btnMon.classList.remove('on');btnMute.style.display='none';dash.classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx) audioCtx.suspend();}
+    if(mon){$('btnMon').textContent='⏸ إيقاف المراقبة';$('btnMon').classList.add('on');$('btnMute').style.display='block'}
+    else {$('btnMon').textContent='▶ بدء المراقبة';$('btnMon').classList.remove('on');$('btnMute').style.display='none';$('dash').classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend();}
   };
 
-  window.toggleMute=function(){muted=!muted;btnMute.textContent=muted?'🔊 إلغاء الكتم':'🔇 كتم الصوت'};
+  window.toggleMute=function(){muted=!muted;$('btnMute').textContent=muted?'🔊 إلغاء الكتم':'🔇 كتم الصوت'};
 
   rtdb.ref('/patient_history').on('value',snap=>{
     const d=snap.val();
-    if(!d){histBody.innerHTML='<tr><td colspan="5">لا توجد سجلات</td></tr>';return}
-    histBody.innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
+    if(!d){$('histBody').innerHTML='<tr><td colspan="5">لا توجد سجلات</td></tr>';return}
+    $('histBody').innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
   });
 })();
 </script>
