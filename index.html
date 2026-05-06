@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Sensor</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Courier New',monospace}
+    body{background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    .header{width:100%;background:#0a0a0a;border-bottom:1px solid #1a3a1a;padding:10px 20px;display:flex;justify-content:space-between;align-items:center}
+    .header h1{color:#00ff44;font-size:20px;letter-spacing:2px}
+    .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;background:#00ff44;box-shadow:0 0 8px #00ff44}
+    .container{width:95%;max-width:900px;margin:15px auto;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card{background:#0a0a0f;border:1px solid #1a2a1a;border-radius:10px;padding:15px}
+    .full{grid-column:1/-1}
+    .chart-container{height:280px;background:#000;border:1px solid #1a3a1a;border-radius:8px;padding:5px}
+    canvas{width:100%!important;height:100%!important}
+    .bpm-display{text-align:center;padding:20px}
+    .bpm-num{font-size:56px;font-weight:bold;transition:color .3s}
+    .bpm-label{font-size:12px;color:#4a6a4a;letter-spacing:3px;margin-bottom:5px}
+    .bpm-unit{font-size:14px;color:#666;margin-top:5px}
+    .diag-badge{padding:8px 16px;border-radius:20px;font-weight:bold;text-align:center;margin-top:10px}
+    .btn{background:#0a1a0a;color:#00ff44;border:1px solid #1a3a1a;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px;width:100%;margin-top:8px;transition:all .2s}
+    .btn:hover{background:#1a2a1a}
+    .btn.active{background:#00ff44;color:#000;border-color:#00ff44}
+    .btn.danger{background:#1a0000;color:#ff0000;border-color:#3a0000}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #1a1a1a}
+    th{color:#4a6a4a}
+    @media(max-width:600px){.container{grid-template-columns:1fr}}
+    .alarm-border{animation:pulse .5s infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 20px red inset}50%{box-shadow:0 0 40px red inset}}
+  </style>
+</head>
+<body>
+  <div class="header"><h1>⚡ HEART SENSOR</h1><div><span class="status-dot" id="statusDot"></span><span id="connStatus">Connecting...</span></div></div>
+  <div class="container" id="mainApp">
+    <div class="card full chart-container"><canvas id="ecgChart"></canvas></div>
+    <div class="card bpm-display">
+      <div class="bpm-label">HEART RATE</div>
+      <div class="bpm-num" id="bpmValue">---</div>
+      <div class="bpm-unit">BPM</div>
+      <div id="bpmStatus" style="font-size:12px;color:#666">Awaiting signal...</div>
+    </div>
+    <div class="card">
+      <div class="bpm-label" style="margin-bottom:10px">DIAGNOSIS</div>
+      <div class="diag-badge" id="diagBadge" style="background:#1a1a1a;color:#888">NO SIGNAL</div>
+      <div style="font-size:11px;color:#555;margin-top:8px;text-align:center" id="diagDetail">Waiting for stable data...</div>
+      <button class="btn" id="btnMonitor" onclick="toggleMonitoring()">▶ START MONITORING</button>
+      <button class="btn danger" id="btnMute" onclick="toggleMute()" style="display:none">🔇 MUTE</button>
+    </div>
+    <div class="card full">
+      <div class="bpm-label" style="margin-bottom:10px">HISTORY</div>
+      <div style="max-height:150px;overflow-y:auto"><table><thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Confidence</th></tr></thead><tbody id="historyBody"><tr><td colspan="5" style="color:#555">Loading...</td></tr></tbody></table></div>
+      <button class="btn" onclick="window.print()" style="margin-top:10px">🖨 PRINT ECG</button>
+    </div>
+  </div>
+
+  <script>
+    // Firebase init
+    firebase.initializeApp({
+      apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
+      authDomain:"sensor-7042b.firebaseapp.com",
+      databaseURL:"https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:"sensor-7042b"
+    });
+    const db = firebase.database();
+
+    // State
+    let ecgBuffer = [];
+    let monitoring = false;
+    let muted = false;
+    let audioCtx = null;
+    let lastBpm = 0;
+    const MAX_POINTS = 500;
+
+    // Chart setup
+    const ctx = document.getElementById('ecgChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type:'line',
+      data:{labels:Array(MAX_POINTS).fill(''),datasets:[{data:Array(MAX_POINTS).fill(null),borderColor:'#00ff44',borderWidth:2,tension:0,pointRadius:0,fill:false}]},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        animation:false,
+        scales:{
+          x:{display:true,grid:{color:'#0a1a0a'},ticks:{color:'#3a5a3a',font:{size:9},maxTicksLimit:6}},
+          y:{display:true,grid:{color:'#0a1a0a'},ticks:{color:'#3a5a3a',font:{size:9}}}
+        },
+        plugins:{legend:{display:false}}
+      }
+    });
+
+    // Real-time listener
+    db.ref('/patient').on('value', snap => {
+      const data = snap.val();
+      if(!data) return;
+      
+      document.getElementById('connStatus').textContent = 'Connected';
+      document.getElementById('statusDot').style.background = '#00ff44';
+      
+      const val = data.ecg_value || 0;
+      const status = data.status || 'disconnected';
+      
+      if(status==='disconnected') {
+        document.getElementById('statusDot').style.background = '#ff8800';
+        document.getElementById('connStatus').textContent = 'Leads Off';
+        if(monitoring) checkAlarm('NO SIGNAL');
+        return;
+      }
+      
+      // Add to buffer
+      ecgBuffer.push(val);
+      if(ecgBuffer.length > MAX_POINTS) ecgBuffer.shift();
+      
+      // Update chart
+      chart.data.datasets[0].data = ecgBuffer;
+      
+      // Auto-scale Y
+      if(ecgBuffer.length > 10) {
+        let min = Math.min(...ecgBuffer.slice(-200));
+        let max = Math.max(...ecgBuffer.slice(-200));
+        let pad = (max-min)*0.15 || 50;
+        chart.options.scales.y.min = min - pad;
+        chart.options.scales.y.max = max + pad;
+      }
+      chart.update('none');
+      
+      // Calculate BPM every 2 seconds
+      if(ecgBuffer.length >= 10) {
+        let seg = ecgBuffer.slice(-10);
+        let min = Math.min(...seg);
+        let max = Math.max(...seg);
+        let thr = min + (max-min)*0.5;
+        let peaks = 0;
+        for(let i=1;i<seg.length;i++) {
+          if(seg[i-1] < thr && seg[i] >= thr) peaks++;
+        }
+        let newBpm = Math.round(peaks * 30);
+        if(newBpm>0 && newBpm<250) {
+          lastBpm = Math.round(lastBpm*0.7 + newBpm*0.3);
+          updateBPM(lastBpm);
+          if(monitoring) checkAlarm(lastBpm);
+        }
+      }
+      
+      // Update last update time
+      document.getElementById('bpmStatus').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+    });
+
+    function updateBPM(bpm) {
+      const el = document.getElementById('bpmValue');
+      el.textContent = bpm;
+      if(bpm>=60 && bpm<=100) el.style.color = '#00ff44';
+      else if((bpm>=50 && bpm<60) || (bpm>100 && bpm<=120)) el.style.color = '#ff8800';
+      else el.style.color = '#ff0000';
+    }
+
+    function checkAlarm(condition) {
+      const badge = document.getElementById('diagBadge');
+      if(condition==='NO SIGNAL') {
+        badge.textContent = 'NO SIGNAL'; badge.style.background='#1a1a1a'; badge.style.color='#888';
+        triggerAlarm(true);
+      } else if(condition>=60 && condition<=100) {
+        badge.textContent = 'NORMAL SINUS RHYTHM'; badge.style.background='#0a2a0a'; badge.style.color='#00ff44';
+        triggerAlarm(false);
+      } else if(condition<40 || condition>120) {
+        badge.textContent = 'ABNORMALITY DETECTED'; badge.style.background='#2a0000'; badge.style.color='#ff0000';
+        triggerAlarm(true);
+      }
+    }
+
+    function triggerAlarm(on) {
+      const body = document.body;
+      if(on) {
+        body.classList.add('alarm-border');
+        if(!muted) startBeep();
+      } else {
+        body.classList.remove('alarm-border');
+        stopBeep();
+      }
+    }
+
+    function startBeep() {
+      if(!audioCtx) audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start();
+      setTimeout(()=>{osc.stop()},100);
+      setTimeout(()=>{if(document.body.classList.contains('alarm-border')) startBeep()},333);
+    }
+
+    function stopBeep() {
+      if(audioCtx) audioCtx.suspend();
+    }
+
+    function toggleMonitoring() {
+      monitoring = !monitoring;
+      const btn = document.getElementById('btnMonitor');
+      if(monitoring) {
+        btn.textContent = '⏸ STOP MONITORING';
+        btn.classList.add('active');
+        document.getElementById('btnMute').style.display = 'block';
+        document.getElementById('bpmStatus').textContent = 'Monitoring active...';
+      } else {
+        btn.textContent = '▶ START MONITORING';
+        btn.classList.remove('active');
+        document.getElementById('btnMute').style.display = 'none';
+        document.body.classList.remove('alarm-border');
+        stopBeep();
+        document.getElementById('bpmStatus').textContent = 'Monitoring stopped';
+      }
+    }
+
+    function toggleMute() {
+      muted = !muted;
+      document.getElementById('btnMute').textContent = muted ? '🔊 UNMUTE' : '🔇 MUTE';
+      if(muted) stopBeep();
+    }
+
+    // Load history
+    db.ref('/patient_history').on('value', snap => {
+      const data = snap.val();
+      const tbody = document.getElementById('historyBody');
+      if(!data) { tbody.innerHTML='<tr><td colspan="5" style="color:#555">No records</td></tr>'; return; }
+      let rows = '';
+      Object.values(data).reverse().slice(0,10).forEach(r => {
+        rows += `<tr><td>${r.date||'-'}</td><td>${r.time||'-'}</td><td>${r.bpm||'-'}</td><td>${r.result||'-'}</td><td>${r.confidence||'-'}</td></tr>`;
+      });
+      tbody.innerHTML = rows;
+    });
+  </script>
+</body>
+</html>
