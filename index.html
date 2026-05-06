@@ -1,216 +1,237 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heart Sensor — Remote Cardiac Monitor</title>
+  <title>Heart Sensor - جهاز مراقبة القلب</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#04070A;--card:#080C11;--border:#131D2A;--text:#E6EDF3;--dim:#7D8590;--faint:#484F58;--green:#3FB950;--red:#F85149;--orange:#D29922;--yellow:#E3B341;--mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif}
+    :root{--bg:#05080C;--card:#0B1016;--border:#182030;--green:#3FB950;--red:#F85149;--orange:#D29922;--text:#E6EDF3;--dim:#7D8590;--faint:#484F58;--mono:'IBM Plex Mono',monospace;--arabic:'Tajawal',sans-serif}
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column}
-    .header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-    .logo{font-family:var(--mono);font-weight:700;font-size:17px;letter-spacing:1.5px;color:var(--green)}
-    .logo span{font-weight:400;font-size:11px;color:var(--dim)}
+    body{background:var(--bg);color:var(--text);font-family:var(--arabic);min-height:100vh;display:flex;flex-direction:column}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+    .logo{font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:1.5px;color:var(--green)}
+    .logo span{font-weight:400;font-size:10px;color:var(--dim)}
     .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);font-family:var(--mono)}
     .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
     .dot.warn{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:none}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-    .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;padding:20px 24px;max-width:1300px;width:100%;margin:0 auto;flex:1}
-    @media(max-width:880px){.grid{grid-template-columns:1fr;padding:12px}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
-    .card.full{grid-column:1/-1}
-    .label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--faint);text-transform:uppercase;margin-bottom:12px;font-weight:600}
-    .chart-wrap{height:300px;background:#020408;border-radius:8px;border:1px solid #0A1520;padding:4px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px;padding:16px 20px;max-width:1100px;width:100%;margin:0 auto;flex:1}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:700px){.row2{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+    .card-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--faint);text-transform:uppercase;margin-bottom:10px;font-weight:600}
+    .chart-wrap{height:320px;background:#020408;border-radius:8px;border:1px solid #0A1520;padding:4px}
     canvas{width:100%!important;height:100%!important}
-    .bpm-block{text-align:center;padding:10px 0}
-    .bpm-num{font-family:var(--mono);font-size:68px;font-weight:700;line-height:1;transition:color .4s}
+    .bpm-block{text-align:center;padding:12px 0}
+    .bpm-num{font-family:var(--mono);font-size:80px;font-weight:700;line-height:1;transition:color .4s}
     .bpm-sub{font-size:11px;color:var(--faint);margin-top:4px;letter-spacing:2px}
-    .bpm-info{font-size:10px;color:var(--faint);margin-top:8px;font-family:var(--mono)}
-    .diag-badge{display:block;padding:10px 16px;border-radius:24px;font-weight:600;font-size:12px;text-align:center;width:100%}
+    .bpm-info{font-size:10px;color:var(--faint);margin-top:6px;font-family:var(--mono)}
+    .diag-badge{display:block;padding:10px 16px;border-radius:24px;font-weight:700;font-size:12px;text-align:center;width:100%}
     .diag-detail{font-size:10px;color:var(--dim);margin-top:10px;line-height:1.7;background:#03060A;padding:10px;border-radius:8px;font-family:var(--mono);white-space:pre-line}
-    .btn{display:block;width:100%;padding:10px 14px;border-radius:6px;font-weight:600;font-size:12px;letter-spacing:.5px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--sans);margin-top:8px;text-align:center}
+    .btn{display:block;width:100%;padding:10px 14px;border-radius:6px;font-weight:600;font-size:12px;letter-spacing:.5px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--arabic);margin-top:8px;text-align:center}
     .btn-start{background:#0A1F12;color:var(--green);border-color:#153520}
     .btn-start.on{background:var(--green);color:#000;border-color:var(--green);box-shadow:0 0 14px rgba(63,185,80,.3)}
     .btn-mute{background:#1A0A0A;color:var(--red);border-color:#2D1010;display:none}
     .btn-print{background:#0A0D12;color:var(--dim);border-color:var(--border)}
-    .table-wrap{max-height:160px;overflow-y:auto}
     table{width:100%;border-collapse:collapse;font-size:10px}
-    th{padding:8px 6px;text-align:left;color:var(--faint);font-weight:600;font-size:9px;letter-spacing:1px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card)}
+    th{padding:8px 6px;text-align:right;color:var(--faint);font-weight:600;font-size:9px;letter-spacing:1px;border-bottom:1px solid var(--border)}
     td{padding:8px 6px;border-bottom:1px solid #0A1118;color:var(--dim)}
     .alarm-flash{animation:alarmPulse .55s infinite}
     @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(248,81,73,0)}50%{box-shadow:inset 0 0 80px rgba(248,81,73,.4)}}
-    @media print{body{background:#fff;color:#000}.header,.btn,.bpm-block{display:none}.grid{display:block;padding:0}.card{border:1px solid #ccc;margin-bottom:10px}.chart-wrap{height:220px}}
+    @media print{body{background:#fff!important;color:#000!important}.header,.btn,.no-print{display:none!important}.grid{display:block!important;padding:0!important}.card{background:#fff!important;border:1px solid #ccc!important;margin-bottom:8px!important}.chart-wrap{height:280px!important;background:#fff!important}}
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="logo">🫀 HEART SENSOR <span>| Clinical Monitor</span></div>
-    <div class="status"><div class="dot" id="led"></div><span id="ledText">Connecting…</span></div>
-  </header>
-  <main class="grid" id="dash">
-    <div class="card full"><div class="label">ECG — Lead II · 25 mm/s</div><div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div></div>
-    <div class="card"><div class="label">Heart Rate</div><div class="bpm-block"><div class="bpm-num" id="bpmDisp">---</div><div class="bpm-sub">B P M</div></div><div class="bpm-info" id="bpmMeta">Awaiting signal…</div></div>
-    <div class="card"><div class="label">AI Diagnosis</div><div class="diag-badge" id="diagBadge" style="background:#10161C;color:var(--faint)">NO SIGNAL</div><div class="diag-detail" id="diagDetail">Waiting for stable ECG data…</div><button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ START MONITORING</button><button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 MUTE</button></div>
-    <div class="card full"><div class="label">Patient History</div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Conf.</th></tr></thead><tbody id="histBody"><tr><td colspan="5" style="color:var(--faint)">Loading…</td></tr></tbody></table></div><button class="btn btn-print" onclick="window.print()" style="margin-top:10px">🖨 PRINT REPORT</button></div>
-  </main>
 
-  <script>
-    (function(){
-      firebase.initializeApp({
-        apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
-        authDomain:"sensor-7042b.firebaseapp.com",
-        databaseURL:"https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId:"sensor-7042b"
-      });
-      const rtdb=firebase.database();
+<header class="header">
+  <div class="logo">🫀 HEART SENSOR <span>| جهاز مراقبة القلب</span></div>
+  <div class="status"><div class="dot" id="led"></div><span id="ledText">جاري الاتصال…</span></div>
+</header>
 
-      const FS=5, MAX=600;
-      let buf=[], monitoring=false, muted=false, audioCtx=null, smBpm=0, alarmT=null;
-      let yMin=null, yMax=null;
+<main class="grid" id="dash">
 
-      const $=id=>document.getElementById(id);
-      const led=$('led'),ledTxt=$('ledText'),bpmD=$('bpmDisp'),bpmM=$('bpmMeta');
-      const dBadge=$('diagBadge'),dDetail=$('diagDetail'),btnMon=$('btnMon'),btnMute=$('btnMute'),histBody=$('histBody'),dash=$('dash');
+  <!-- ECG Chart -->
+  <div class="card">
+    <div class="card-label">ECG — Lead II · 25 mm/s</div>
+    <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
+  </div>
 
-      const ctx=$('ecgCanvas').getContext('2d');
-      const chart=new Chart(ctx,{
-        type:'line',
-        data:{labels:[],datasets:[{data:[],borderColor:'#3FB950',borderWidth:1.5,tension:0,pointRadius:0,fill:false}]},
-        options:{
-          responsive:true,maintainAspectRatio:false,animation:false,
-          scales:{
-            x:{display:true,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9},maxTicksLimit:6}},
-            y:{display:true,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9}}}
-          },
-          plugins:{legend:{display:false}}
-        }
-      });
+  <div class="row2">
+    <!-- BPM -->
+    <div class="card">
+      <div class="card-label">معدل ضربات القلب</div>
+      <div class="bpm-block">
+        <div class="bpm-num" id="bpmDisp">---</div>
+        <div class="bpm-sub">نبضة / دقيقة</div>
+      </div>
+      <div class="bpm-info" id="bpmMeta">بانتظار الإشارة…</div>
+    </div>
 
-      function findPeaks(sig,fs){
-        if(sig.length<fs*2) return [];
-        const avg=sig.reduce((a,b)=>a+b,0)/sig.length;
-        const thr=avg, minDist=Math.floor(fs*.4);
-        const p=[];
-        for(let i=1;i<sig.length-1;i++){
-          if(sig[i]<thr) continue;
-          if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1]) continue;
-          if(p.length&&i-p[p.length-1]<minDist) continue;
-          p.push(i);
-        }
-        return p;
+    <!-- Diagnosis -->
+    <div class="card">
+      <div class="card-label">تحليل الذكاء الاصطناعي 🤖</div>
+      <div class="diag-badge" id="diagBadge" style="background:#10161C;color:var(--faint)">لا توجد إشارة</div>
+      <div class="diag-detail" id="diagDetail">بانتظار بيانات ECG مستقرة…</div>
+      <button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ بدء المراقبة</button>
+      <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 كتم الصوت</button>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card no-print">
+    <div class="card-label">سجل المريض — آخر 10 قراءات</div>
+    <table><thead><tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>النتيجة</th><th>الثقة</th></tr></thead><tbody id="histBody"><tr><td colspan="5" style="color:var(--faint)">لا توجد سجلات</td></tr></tbody></table>
+    <button class="btn btn-print" onclick="window.print()" style="margin-top:10px">🖨 طباعة التخطيط</button>
+  </div>
+</main>
+
+<script>
+(function(){
+  firebase.initializeApp({
+    apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
+    authDomain:"sensor-7042b.firebaseapp.com",
+    databaseURL:"https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:"sensor-7042b"
+  });
+  const rtdb=firebase.database();
+
+  const FS=5, MAX=500;
+  let buf=[], monitoring=false, muted=false, audioCtx=null, smBpm=0, alarmT=null;
+  let yMin=1700, yMax=1900;
+
+  const $=id=>document.getElementById(id);
+  const led=$('led'),ledTxt=$('ledText'),bpmD=$('bpmDisp'),bpmM=$('bpmMeta');
+  const dBadge=$('diagBadge'),dDetail=$('diagDetail'),btnMon=$('btnMon'),btnMute=$('btnMute'),histBody=$('histBody'),dash=$('dash');
+
+  // Chart
+  const ctx=$('ecgCanvas').getContext('2d');
+  const chart=new Chart(ctx,{
+    type:'line',
+    data:{labels:[],datasets:[{data:[],borderColor:'#E53935',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:false,
+      scales:{
+        x:{display:true,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9},maxTicksLimit:6}},
+        y:{min:1700,max:1900,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9},stepSize:50}}
+      },
+      plugins:{legend:{display:false}}
+    }
+  });
+
+  function findPeaks(sig){
+    if(sig.length<10) return [];
+    let sum=0;for(let i=0;i<sig.length;i++) sum+=sig[i];
+    const thr=sum/sig.length, minD=Math.floor(FS*.4);
+    const p=[];
+    for(let i=1;i<sig.length-1;i++){
+      if(sig[i]<=thr) continue;
+      if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1]) continue;
+      if(p.length&&i-p[p.length-1]<minD) continue;
+      p.push(i);
+    }
+    return p;
+  }
+
+  function calcBPM(sig){
+    const p=findPeaks(sig);
+    if(p.length<2) return 0;
+    const rr=[];
+    for(let i=1;i<p.length;i++) rr.push((p[i]-p[i-1])/FS);
+    const avg=rr.reduce((a,b)=>a+b,0)/rr.length;
+    const bpm=Math.round(60/avg);
+    return (bpm>20&&bpm<250)?bpm:0;
+  }
+
+  rtdb.ref('/patient').on('value',snap=>{
+    const d=snap.val();
+    if(!d) return;
+    const v=d.ecg_value??0, s=d.status??'disconnected';
+
+    if(s==='ok'&&v!==0){
+      led.className='dot';ledTxt.textContent='متصل — مباشر';
+    } else {
+      led.className='dot warn';ledTxt.textContent='الأقطاب منفصلة';
+      if(monitoring) setDiag('NO_SIGNAL',0);
+      return;
+    }
+
+    buf.push(v);if(buf.length>MAX) buf.shift();
+
+    chart.data.datasets[0].data=[...buf];
+    if(buf.length>10){
+      const seg=buf.slice(-200);
+      const min=Math.min(...seg),max=Math.max(...seg);
+      const pad=Math.max((max-min)*.3,50);
+      const nm=min-pad,nx=max+pad;
+      yMin=yMin*.7+nm*.3;yMax=yMax*.7+nx*.3;
+      chart.options.scales.y.min=Math.floor(yMin/10)*10;
+      chart.options.scales.y.max=Math.ceil(yMax/10)*10;
+    }
+    chart.update('none');
+
+    if(buf.length>=FS*3){
+      const raw=calcBPM(buf.slice(-FS*3));
+      if(raw>0){
+        smBpm=Math.round(smBpm*.5+raw*.5);
+        bpmD.textContent=smBpm;
+        if(smBpm>=60&&smBpm<=100) bpmD.style.color='var(--green)';
+        else if((smBpm>=50&&smBpm<60)||(smBpm>100&&smBpm<=120)) bpmD.style.color='var(--orange)';
+        else bpmD.style.color='var(--red)';
+        if(monitoring) setDiag(null,smBpm);
       }
+    }
+    bpmM.textContent='آخر تحديث: '+new Date().toLocaleTimeString();
+  });
 
-      function calcBPM(sig,fs){
-        const p=findPeaks(sig,fs);
-        if(p.length<2) return 0;
-        const rr=[];
-        for(let i=1;i<p.length;i++) rr.push(p[i]-p[i-1]);
-        const sec=rr.map(r=>r/fs);
-        return Math.round(60/(sec.reduce((a,b)=>a+b,0)/sec.length));
-      }
+  function setDiag(ov,bp){
+    let l,c,bg,dt;
+    if(ov==='NO_SIGNAL'){l='لا توجد إشارة';c='var(--faint)';bg='#10161C';dt='⚠ المستشعر منفصل.\n→ تحقق من توصيل الأقطاب.\n→ تأكد من تشغيل AD8232.';alarm(true)}
+    else if(bp>=60&&bp<=100){l='إيقاع جيبي طبيعي';c='var(--green)';bg='#0A1F12';dt=`✓ إيقاع منتظم: ${bp} نبضة/دقيقة.\n✓ موجات P طبيعية.\n✓ مدة QRS < 120 مللي ثانية.\n✓ لا يوجد اضطراب نظم.`;alarm(false)}
+    else if(bp>40&&bp<50){l='بطء قلب جيبي';c='var(--orange)';bg='#1A1608';dt=`⚠ معدل ضربات القلب منخفض: ${bp}.\n→ قد يكون طبيعياً عند الرياضيين.\n→ راقب أعراض الدوخة.`;alarm(true)}
+    else if(bp>100&&bp<=120){l='تسرع قلب جيبي';c='var(--orange)';bg='#1A1608';dt=`⚠ معدل ضربات القلب مرتفع: ${bp}.\n→ قد يكون بسبب التوتر أو الحمى.\n→ قيّم السبب الأساسي.`;alarm(true)}
+    else if(bp>120){l='⚠ اضطراب نظم القلب';c='var(--red)';bg='#1A0A0A';dt=`⚠ تسرع قلب غير طبيعي.\n→ فترات R-R غير منتظمة.\n→ ينصح بالتقييم الطبي العاجل.\n→ المعدل: ${bp} نبضة/دقيقة.`;alarm(true)}
+    else {l='جاري التحليل…';c='var(--orange)';bg='#1A1808';dt='جمع المزيد من البيانات للتحليل الدقيق…';alarm(false)}
+    dBadge.textContent=l;dBadge.style.color=c;dBadge.style.background=bg;dDetail.textContent=dt;
+  }
 
-      rtdb.ref('/patient').on('value',snap=>{
-        const d=snap.val();
-        if(!d) return;
-        const v=d.ecg_value??0, s=d.status??'disconnected';
+  function alarm(on){
+    dash.classList.toggle('alarm-flash',on);
+    if(on&&!muted) beep();
+    else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx) audioCtx.suspend();}
+  }
 
-        if(s==='ok'&&v!==0){
-          led.className='dot';ledTxt.textContent='Live';
-        } else {
-          led.className='dot warn';ledTxt.textContent='Leads Off';
-          if(monitoring) setDiag('NO_SIGNAL',0);
-          return;
-        }
+  function beep(){
+    try{
+      if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended') audioCtx.resume();
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='square';o.frequency.value=880;g.gain.value=.2;
+      o.connect(g);g.connect(audioCtx.destination);
+      o.start();setTimeout(()=>o.stop(),120);
+      alarmT=setTimeout(()=>{if(dash.classList.contains('alarm-flash')) beep();},350);
+    }catch(e){}
+  }
 
-        buf.push(v);
-        if(buf.length>MAX) buf.shift();
+  window.toggleMon=function(){
+    monitoring=!monitoring;
+    if(monitoring){btnMon.textContent='⏸ إيقاف المراقبة';btnMon.classList.add('on');btnMute.style.display='block';bpmM.textContent='المراقبة نشطة…'}
+    else {btnMon.textContent='▶ بدء المراقبة';btnMon.classList.remove('on');btnMute.style.display='none';dash.classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx) audioCtx.suspend();bpmM.textContent='المراقبة متوقفة';}
+  };
 
-        chart.data.datasets[0].data=[...buf];
+  window.toggleMute=function(){
+    muted=!muted;btnMute.textContent=muted?'🔊 إلغاء الكتم':'🔇 كتم الصوت';
+  };
 
-        // AUTO-SCALE Y-AXIS — FIXED
-        if(buf.length>10){
-          const seg=buf.slice(-300);
-          const min=Math.min(...seg);
-          const max=Math.max(...seg);
-          const range=max-min || 60;
-          const pad=range*0.4;
-          const newMin=min-pad;
-          const newMax=max+pad;
-          
-          // Smooth scale transitions
-          if(yMin===null){yMin=newMin;yMax=newMax;}
-          else {yMin=yMin*.7+newMin*.3;yMax=yMax*.7+newMax*.3;}
-          
-          chart.options.scales.y.min=yMin;
-          chart.options.scales.y.max=yMax;
-        }
-        chart.update('none');
-
-        // BPM
-        if(buf.length>=FS*2){
-          const raw=calcBPM(buf.slice(-FS*3),FS);
-          if(raw>25&&raw<250){
-            smBpm=Math.round(smBpm*.55+raw*.45);
-            bpmD.textContent=smBpm;
-            if(smBpm>=60&&smBpm<=100) bpmD.style.color='var(--green)';
-            else if((smBpm>=50&&smBpm<60)||(smBpm>100&&smBpm<=120)) bpmD.style.color='var(--orange)';
-            else bpmD.style.color='var(--red)';
-            if(monitoring) setDiag(null,smBpm);
-          }
-        }
-        bpmM.textContent='Last: '+new Date().toLocaleTimeString();
-      });
-
-      function setDiag(ov,bp){
-        let l,c,bg,dt;
-        if(ov==='NO_SIGNAL'){l='NO SIGNAL';c='var(--faint)';bg='#10161C';dt='⚠ Sensor disconnected.\n→ Verify electrode placement.\n→ Check AD8232 power.';alarm(true)}
-        else if(bp>=60&&bp<=100){l='NORMAL SINUS RHYTHM';c='var(--green)';bg='#0A1F12';dt=`✓ Regular rhythm: ${bp} BPM.\n✓ P-waves upright.\n✓ QRS < 120 ms.\n✓ No ectopy detected.`;alarm(false)}
-        else if(bp>40&&bp<50){l='SINUS BRADYCARDIA';c='var(--orange)';bg='#1A1608';dt=`⚠ ${bp} BPM — below normal.\n→ Check if symptomatic.\n→ May be normal in athletes.`;alarm(true)}
-        else if(bp>100&&bp<=120){l='SINUS TACHYCARDIA';c='var(--orange)';bg='#1A1608';dt=`⚠ ${bp} BPM — elevated.\n→ Possible stress, pain, fever.\n→ Evaluate underlying cause.`;alarm(true)}
-        else if(bp>120){l='⚠ ABNORMALITY DETECTED';c='var(--red)';bg='#1A0A0A';dt=`⚠ Tachyarrhythmia suspected.\n→ Irregular R-R intervals.\n→ URGENT evaluation needed.\n→ Rate: ${bp} BPM.`;alarm(true)}
-        else {l='ANALYZING…';c='var(--yellow)';bg='#1A1808';dt='Gathering data for analysis…';alarm(false)}
-        dBadge.textContent=l;dBadge.style.color=c;dBadge.style.background=bg;dDetail.textContent=dt;
-      }
-
-      function alarm(on){
-        dash.classList.toggle('alarm-flash',on);
-        if(on&&!muted) beep();
-        else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();}
-      }
-
-      function beep(){
-        try{
-          if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-          if(audioCtx.state==='suspended') audioCtx.resume();
-          const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-          o.type='square';o.frequency.value=880;g.gain.value=.2;
-          o.connect(g);g.connect(audioCtx.destination);
-          o.start();setTimeout(()=>o.stop(),120);
-          alarmT=setTimeout(()=>{if(dash.classList.contains('alarm-flash')) beep();},350);
-        }catch(e){}
-      }
-
-      window.toggleMon=function(){
-        monitoring=!monitoring;
-        if(monitoring){btnMon.textContent='⏸ STOP MONITORING';btnMon.classList.add('on');btnMute.style.display='block';bpmM.textContent='Monitoring…'}
-        else {btnMon.textContent='▶ START MONITORING';btnMon.classList.remove('on');btnMute.style.display='none';dash.classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();bpmM.textContent='Paused';}
-      };
-
-      window.toggleMute=function(){
-        muted=!muted;btnMute.textContent=muted?'🔊 UNMUTE':'🔇 MUTE';
-        if(muted&&audioCtx&&audioCtx.state==='running') audioCtx.suspend();
-      };
-
-      rtdb.ref('/patient_history').on('value',snap=>{
-        const d=snap.val();
-        if(!d){histBody.innerHTML='<tr><td colspan="5" style="color:var(--faint)">No records</td></tr>';return;}
-        histBody.innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
-      });
-    })();
-  </script>
+  rtdb.ref('/patient_history').on('value',snap=>{
+    const d=snap.val();
+    if(!d){histBody.innerHTML='<tr><td colspan="5" style="color:var(--faint)">لا توجد سجلات</td></tr>';return}
+    histBody.innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
+  });
+})();
+</script>
 </body>
 </html>
