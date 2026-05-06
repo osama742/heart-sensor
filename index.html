@@ -12,43 +12,40 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <!-- Google Fonts -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* ===== CSS Reset & Variables ===== */
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    /* ===== CSS Variables & Reset ===== */
     :root{
-      --bg-primary:#06080B;
-      --bg-secondary:#0B0E13;
-      --bg-card:#0D1117;
-      --border-color:#1A2332;
-      --border-glow:#1E3A2F;
-      --text-primary:#E6EDF3;
-      --text-secondary:#7D8590;
-      --text-muted:#484F58;
-      --accent-green:#2EA043;
-      --accent-green-glow:#3FB950;
-      --accent-red:#DA3633;
-      --accent-orange:#D29922;
-      --accent-yellow:#E3B341;
-      --chart-line:#3FB950;
-      --grid-color:rgba(48,54,61,0.4);
+      --bg-deep:#04070A;
+      --bg-card:#080C11;
+      --bg-elevated:#0C1119;
+      --border:#131D2A;
+      --border-active:#1B3A2A;
+      --text-main:#E6EDF3;
+      --text-dim:#7D8590;
+      --text-faint:#484F58;
+      --green:#2EA043;
+      --green-glow:#3FB950;
+      --red:#DA3633;
+      --red-glow:#F85149;
+      --orange:#D29922;
+      --yellow:#E3B341;
       --font-mono:'IBM Plex Mono',monospace;
       --font-sans:'Inter',-apple-system,sans-serif;
     }
-
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{
-      background:var(--bg-primary);
-      color:var(--text-primary);
+      background:var(--bg-deep);
+      color:var(--text-main);
       font-family:var(--font-sans);
       min-height:100vh;
       display:flex;
       flex-direction:column;
       -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
     }
 
     /* ===== Header ===== */
@@ -57,223 +54,233 @@
       justify-content:space-between;
       align-items:center;
       padding:14px 28px;
-      background:var(--bg-secondary);
-      border-bottom:1px solid var(--border-color);
+      background:var(--bg-elevated);
+      border-bottom:1px solid var(--border);
       position:sticky;
       top:0;
-      z-index:50;
-      backdrop-filter:blur(12px);
+      z-index:100;
+      backdrop-filter:blur(16px);
     }
-    .header-logo{
+    .header-brand{
       display:flex;
       align-items:center;
       gap:10px;
       font-family:var(--font-mono);
       font-weight:700;
-      font-size:18px;
-      letter-spacing:2px;
-      color:var(--accent-green-glow);
+      font-size:17px;
+      letter-spacing:1.5px;
+      color:var(--green-glow);
     }
-    .header-logo span{color:var(--text-secondary);font-weight:400;font-size:13px}
+    .header-brand span{
+      font-weight:400;
+      font-size:11px;
+      color:var(--text-dim);
+      letter-spacing:1px;
+    }
     .header-status{
       display:flex;
       align-items:center;
-      gap:8px;
+      gap:10px;
       font-size:12px;
-      color:var(--text-secondary);
+      color:var(--text-dim);
+      font-family:var(--font-mono);
     }
-    .status-indicator{
+    .indicator{
       width:8px;height:8px;
       border-radius:50%;
-      background:var(--accent-green-glow);
-      box-shadow:0 0 8px var(--accent-green-glow);
-      animation:statusPulse 2s infinite;
+      background:var(--green-glow);
+      box-shadow:0 0 8px var(--green-glow);
+      animation:pulse 2s infinite;
     }
-    .status-indicator.warning{background:var(--accent-orange);box-shadow:0 0 8px var(--accent-orange);animation:none}
-    @keyframes statusPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .indicator.warn{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:none}
+    .indicator.danger{background:var(--red-glow);box-shadow:0 0 8px var(--red-glow);animation:blink .5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-    /* ===== Main Grid ===== */
-    .main-grid{
+    /* ===== Layout ===== */
+    .grid{
       display:grid;
-      grid-template-columns:1.6fr 1fr;
+      grid-template-columns:1.5fr 1fr;
       gap:16px;
-      padding:18px 28px;
-      max-width:1280px;
+      padding:20px 28px;
+      max-width:1300px;
       width:100%;
       margin:0 auto;
       flex:1;
     }
-    @media(max-width:860px){
-      .main-grid{grid-template-columns:1fr;padding:12px 14px}
-    }
+    @media(max-width:880px){.grid{grid-template-columns:1fr;padding:12px 14px}}
 
     /* ===== Cards ===== */
     .card{
       background:var(--bg-card);
-      border:1px solid var(--border-color);
-      border-radius:12px;
-      padding:18px 20px;
-      transition:border-color .2s;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:20px;
+      transition:border-color .25s;
     }
-    .card:hover{border-color:#243040}
-    .card.full-width{grid-column:1/-1}
-    .card-header{
+    .card:hover{border-color:#1F3140}
+    .card.full{grid-column:1/-1}
+    .card-label{
       font-family:var(--font-mono);
       font-size:10px;
-      letter-spacing:2px;
-      color:var(--text-muted);
+      letter-spacing:2.5px;
+      color:var(--text-faint);
       text-transform:uppercase;
       margin-bottom:14px;
       font-weight:600;
     }
 
     /* ===== Chart ===== */
-    .chart-container{
-      height:320px;
-      background:#020408;
-      border-radius:8px;
-      padding:4px;
-      border:1px solid #0F1A24;
+    .chart-wrap{
+      height:310px;
+      background:#010306;
+      border-radius:10px;
+      border:1px solid #0A1520;
+      padding:2px;
     }
     canvas{width:100%!important;height:100%!important}
 
     /* ===== BPM ===== */
-    .bpm-section{text-align:center;padding:8px 0}
-    .bpm-value{
+    .bpm-block{text-align:center;padding:8px 0}
+    .bpm-number{
       font-family:var(--font-mono);
-      font-size:68px;
+      font-size:72px;
       font-weight:700;
       line-height:1;
-      transition:color .3s;
-      letter-spacing:-2px;
+      transition:color .4s;
+      letter-spacing:-3px;
     }
-    .bpm-unit{font-size:13px;color:var(--text-muted);margin-top:4px;letter-spacing:1px}
-    .bpm-sub{font-size:11px;color:var(--text-muted);margin-top:8px}
+    .bpm-label{font-size:12px;color:var(--text-faint);margin-top:4px;letter-spacing:2px}
+    .bpm-footer{font-size:11px;color:var(--text-faint);margin-top:10px;font-family:var(--font-mono)}
 
     /* ===== Diagnosis ===== */
-    .diagnosis-badge{
-      display:inline-block;
-      padding:8px 16px;
-      border-radius:20px;
+    .diag-badge{
+      display:block;
+      padding:10px 18px;
+      border-radius:24px;
       font-weight:600;
       font-size:12px;
-      letter-spacing:0.5px;
+      letter-spacing:.5px;
       text-align:center;
       width:100%;
     }
-    .diagnosis-detail{
+    .diag-notes{
       font-size:11px;
-      color:var(--text-secondary);
-      margin-top:10px;
-      line-height:1.6;
-      background:#060A0F;
-      padding:10px;
-      border-radius:6px;
+      color:var(--text-dim);
+      margin-top:12px;
+      line-height:1.7;
+      background:#03060A;
+      padding:12px;
+      border-radius:8px;
+      font-family:var(--font-mono);
+      white-space:pre-line;
     }
 
     /* ===== Buttons ===== */
     .btn{
       display:block;
       width:100%;
-      padding:10px 16px;
-      border-radius:6px;
+      padding:11px 16px;
+      border-radius:8px;
       font-weight:600;
       font-size:12px;
-      letter-spacing:0.8px;
+      letter-spacing:.8px;
       cursor:pointer;
       border:1px solid transparent;
-      transition:all .15s ease;
+      transition:all .15s;
       font-family:var(--font-sans);
       margin-top:10px;
       text-align:center;
     }
-    .btn-primary{background:#0F2918;color:var(--accent-green-glow);border-color:#1B3D25}
-    .btn-primary:hover{background:#162F20}
-    .btn-primary.active{background:var(--accent-green);color:#fff;border-color:var(--accent-green);box-shadow:0 0 14px rgba(46,160,67,0.3)}
-    .btn-danger{background:#1A0C0C;color:var(--accent-red);border-color:#2D1212}
-    .btn-danger:hover{background:#241010}
-    .btn-secondary{background:#0F1217;color:var(--text-secondary);border-color:var(--border-color)}
-    .btn-secondary:hover{background:#161B22}
+    .btn-start{background:#0A1F12;color:var(--green-glow);border-color:#153520}
+    .btn-start:hover{background:#0E2818}
+    .btn-start.on{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 0 16px rgba(46,160,67,.35)}
+    .btn-mute{background:#1A0A0A;color:var(--red);border-color:#2D1010;display:none}
+    .btn-mute:hover{background:#240E0E}
+    .btn-print{background:var(--bg-elevated);color:var(--text-dim);border-color:var(--border);font-weight:500}
+    .btn-print:hover{background:#131A24}
 
     /* ===== Table ===== */
-    .table-wrap{max-height:180px;overflow-y:auto}
+    .table-scroll{max-height:180px;overflow-y:auto}
     table{width:100%;border-collapse:collapse;font-size:11px}
-    th{padding:10px 8px;text-align:left;color:var(--text-muted);font-weight:600;font-size:10px;letter-spacing:1px;border-bottom:1px solid var(--border-color);position:sticky;top:0;background:var(--bg-card)}
-    td{padding:10px 8px;border-bottom:1px solid #0F141A;color:var(--text-secondary)}
-    tr:hover td{background:rgba(255,255,255,0.01)}
+    th{padding:10px 8px;text-align:left;color:var(--text-faint);font-weight:600;font-size:10px;letter-spacing:1px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card);z-index:1}
+    td{padding:10px 8px;border-bottom:1px solid #0A1118;color:var(--text-dim)}
+    tr:hover td{background:rgba(255,255,255,.012)}
 
-    /* ===== Alarm Animation ===== */
-    .alarm-active{animation:alarmFlash .6s infinite}
-    @keyframes alarmFlash{
+    /* ===== Alarm ===== */
+    .alarm-flash{animation:alarmPulse .55s infinite}
+    @keyframes alarmPulse{
       0%,100%{box-shadow:inset 0 0 0px rgba(218,54,51,0)}
-      50%{box-shadow:inset 0 0 80px rgba(218,54,51,0.35)}
+      50%{box-shadow:inset 0 0 100px rgba(218,54,51,.45)}
     }
 
     /* ===== Print ===== */
     @media print{
       body{background:#fff;color:#000}
-      .header,.btn,.bpm-section{display:none}
-      .main-grid{display:block;padding:0}
+      .header,.btn,.bpm-block{display:none}
+      .grid{display:block;padding:0}
       .card{border:1px solid #ccc;margin-bottom:10px;break-inside:avoid}
-      .chart-container{height:250px}
+      .chart-wrap{height:240px}
+      .card-label,.diag-notes{color:#333}
     }
   </style>
 </head>
 <body>
+
   <!-- Header -->
   <header class="header">
-    <div class="header-logo">
-      🫀 HEART SENSOR <span>| Remote Monitor</span>
-    </div>
+    <div class="header-brand">🫀 HEART SENSOR <span>| Clinical Monitor</span></div>
     <div class="header-status">
-      <div class="status-indicator" id="statusIndicator"></div>
-      <span id="statusText">Connecting…</span>
+      <div class="indicator" id="led"></div>
+      <span id="ledText">Connecting…</span>
     </div>
   </header>
 
-  <!-- Main Dashboard -->
-  <main class="main-grid" id="dashboard">
+  <!-- Grid -->
+  <main class="grid" id="dashboard">
+
     <!-- ECG Chart -->
-    <div class="card full-width">
-      <div class="card-header">ECG — Lead II · 25 mm/s</div>
-      <div class="chart-container"><canvas id="ecgCanvas"></canvas></div>
+    <div class="card full">
+      <div class="card-label">ECG — Lead II · 25 mm/s</div>
+      <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
     </div>
 
     <!-- BPM -->
     <div class="card">
-      <div class="card-header">Heart Rate</div>
-      <div class="bpm-section">
-        <div class="bpm-value" id="bpmDisplay">---</div>
-        <div class="bpm-unit">BPM</div>
+      <div class="card-label">Heart Rate</div>
+      <div class="bpm-block">
+        <div class="bpm-number" id="bpmDisplay">---</div>
+        <div class="bpm-label">B P M</div>
       </div>
-      <div class="bpm-sub" id="bpmMeta">Awaiting signal…</div>
+      <div class="bpm-footer" id="bpmMeta">Awaiting signal…</div>
     </div>
 
-    <!-- Diagnosis & AI -->
+    <!-- Diagnosis -->
     <div class="card">
-      <div class="card-header">AI Diagnosis</div>
-      <div class="diagnosis-badge" id="diagBadge" style="background:#161B22;color:var(--text-muted)">NO SIGNAL</div>
-      <div class="diagnosis-detail" id="diagDetail">Waiting for stable ECG data…</div>
-      <button class="btn btn-primary" id="btnMonitor" onclick="toggleMonitoring()">▶ START MONITORING</button>
-      <button class="btn btn-danger" id="btnMute" onclick="toggleMute()" style="display:none">🔇 MUTE ALARM</button>
+      <div class="card-label">AI Diagnosis</div>
+      <div class="diag-badge" id="diagBadge" style="background:#10161C;color:var(--text-faint)">NO SIGNAL</div>
+      <div class="diag-notes" id="diagNotes">Waiting for stable ECG data…</div>
+      <button class="btn btn-start" id="btnMonitor" onclick="toggleMonitor()">▶ START MONITORING</button>
+      <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 MUTE ALARM</button>
     </div>
 
     <!-- History -->
-    <div class="card full-width">
-      <div class="card-header">Patient History — Last 10 Records</div>
-      <div class="table-wrap">
+    <div class="card full">
+      <div class="card-label">Patient History — Last 10 Records</div>
+      <div class="table-scroll">
         <table>
-          <thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Confidence</th></tr></thead>
-          <tbody id="historyBody"><tr><td colspan="5" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Result</th><th>Conf.</th></tr></thead>
+          <tbody id="historyBody"><tr><td colspan="5" style="color:var(--text-faint)">Loading records…</td></tr></tbody>
         </table>
       </div>
-      <button class="btn btn-secondary" onclick="window.print()" style="margin-top:12px">🖨 PRINT ECG REPORT</button>
+      <button class="btn btn-print" onclick="window.print()" style="margin-top:12px">🖨 PRINT ECG REPORT</button>
     </div>
+
   </main>
 
   <script>
     (function(){
-      // ────────── Firebase Init ──────────
+      // ──────── Firebase ────────
       firebase.initializeApp({
         apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
         authDomain:"sensor-7042b.firebaseapp.com",
@@ -282,244 +289,198 @@
       });
       const rtdb = firebase.database();
 
-      // ────────── State ──────────
-      const MAX_POINTS = 500;
-      let ecgData = [];
+      // ──────── State ────────
+      const BUFFER_SIZE = 600;
+      const SAMPLE_RATE = 5; // Hz — matches ESP32 send rate
+      let ecgBuffer = [];
       let isMonitoring = false;
       let isMuted = false;
-      let lastBPM = 0;
       let audioCtx = null;
-      let smoothedBPM = 0;
+      let smoothedBpm = 0;
+      let alarmTimeout = null;
 
-      // ────────── DOM Refs ──────────
-      const $ = id => document.getElementById(id);
-      const statusIndicator = $('statusIndicator');
-      const statusText = $('statusText');
-      const bpmDisplay = $('bpmDisplay');
-      const bpmMeta = $('bpmMeta');
-      const diagBadge = $('diagBadge');
-      const diagDetail = $('diagDetail');
-      const btnMonitor = $('btnMonitor');
-      const btnMute = $('btnMute');
-      const historyBody = $('historyBody');
-      const dashboard = $('dashboard');
+      // ──────── DOM ────────
+      const $=id=>document.getElementById(id);
+      const led=$('led'),ledText=$('ledText'),bpmDisplay=$('bpmDisplay'),bpmMeta=$('bpmMeta');
+      const diagBadge=$('diagBadge'),diagNotes=$('diagNotes');
+      const btnMonitor=$('btnMonitor'),btnMute=$('btnMute'),historyBody=$('historyBody');
+      const dashboard=$('dashboard');
 
-      // ────────── Chart.js ──────────
-      const ctx = $('ecgCanvas').getContext('2d');
-      const chart = new Chart(ctx,{
+      // ──────── Chart ────────
+      const ctx=$('ecgCanvas').getContext('2d');
+      const chart=new Chart(ctx,{
         type:'line',
-        data:{
-          labels:[],
-          datasets:[{
-            data:[],
-            borderColor:'#3FB950',
-            borderWidth:1.6,
-            tension:0,
-            pointRadius:0,
-            fill:false
-          }]
-        },
+        data:{labels:[],datasets:[{data:[],borderColor:'#3FB950',borderWidth:1.5,tension:0,pointRadius:0,fill:false}]},
         options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          animation:false,
+          responsive:true,maintainAspectRatio:false,animation:false,
           scales:{
-            x:{
-              display:true,
-              grid:{color:rgba(48,54,61,0.35)},
-              ticks:{color:'#484F58',font:{size:9},maxTicksLimit:6}
-            },
-            y:{
-              display:true,
-              grid:{color:rgba(48,54,61,0.35)},
-              ticks:{color:'#484F58',font:{size:9}}
-            }
+            x:{display:true,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9},maxTicksLimit:6}},
+            y:{display:true,grid:{color:'rgba(48,54,61,.3)'},ticks:{color:'#484F58',font:{size:9}}}
           },
           plugins:{legend:{display:false}}
         }
       });
 
-      // ────────── Real‑time Listener ──────────
+      // ──────── Peak Detection Engine (SciPy-style) ────────
+      function detectPeaks(signal, fs){
+        if(signal.length<fs*2) return [];
+        const meanVal = signal.reduce((a,b)=>a+b,0)/signal.length;
+        const threshold = meanVal;
+        const minDist = Math.floor(fs*0.4);
+        const peaks = [];
+        for(let i=1;i<signal.length-1;i++){
+          if(signal[i]<threshold) continue;
+          if(signal[i]<=signal[i-1]||signal[i]<=signal[i+1]) continue;
+          if(peaks.length>0 && i-peaks[peaks.length-1]<minDist) continue;
+          peaks.push(i);
+        }
+        return peaks;
+      }
+
+      function computeBPM(signal, fs){
+        const peaks = detectPeaks(signal, fs);
+        if(peaks.length<2) return 0;
+        const rrSamples = [];
+        for(let i=1;i<peaks.length;i++) rrSamples.push(peaks[i]-peaks[i-1]);
+        const rrSeconds = rrSamples.map(rr=>rr/fs);
+        const avgRR = rrSeconds.reduce((a,b)=>a+b,0)/rrSeconds.length;
+        return Math.round(60/avgRR);
+      }
+
+      // ──────── Real-time Listener ────────
       rtdb.ref('/patient').on('value',snap=>{
-        const data = snap.val();
+        const data=snap.val();
         if(!data) return;
 
         const ecgValue = data.ecg_value ?? 0;
-        const sensorStatus = data.status ?? 'disconnected';
+        const status = data.status ?? 'disconnected';
 
-        // Update connection UI
-        if(sensorStatus==='ok' && ecgValue!==0){
-          statusIndicator.className='status-indicator';
-          statusText.textContent='Live — Patient Connected';
+        // Connection LED
+        if(status==='ok' && ecgValue!==0){
+          led.className='indicator';
+          ledText.textContent='Live — Connected';
         } else {
-          statusIndicator.className='status-indicator warning';
-          statusText.textContent='Leads Off / No Signal';
-          if(isMonitoring) updateDiagnosis('NO_SIGNAL',0);
+          led.className='indicator warn';
+          ledText.textContent='Leads Off';
+          if(isMonitoring) setDiagnosis('NO_SIGNAL',0);
           return;
         }
 
-        // Push to buffer
-        ecgData.push(ecgValue);
-        if(ecgData.length>MAX_POINTS) ecgData.shift();
+        // Buffer
+        ecgBuffer.push(ecgValue);
+        if(ecgBuffer.length>BUFFER_SIZE) ecgBuffer.shift();
 
-        // Update chart
-        chart.data.datasets[0].data = [...ecgData];
-
-        // Auto‑scale Y axis
-        if(ecgData.length>10){
-          const segment = ecgData.slice(-200);
-          const min = Math.min(...segment);
-          const max = Math.max(...segment);
-          const padding = Math.max((max-min)*0.25, 80);
-          chart.options.scales.y.min = min - padding;
-          chart.options.scales.y.max = max + padding;
+        // Chart update
+        chart.data.datasets[0].data=[...ecgBuffer];
+        if(ecgBuffer.length>10){
+          const seg=ecgBuffer.slice(-300);
+          const min=Math.min(...seg),max=Math.max(...seg);
+          const pad=Math.max((max-min)*.3,100);
+          chart.options.scales.y.min=min-pad;
+          chart.options.scales.y.max=max+pad;
         }
         chart.update('none');
 
-        // ── BPM Calculation (2‑second auto‑threshold) ──
-        if(ecgData.length>=10){
-          const window = ecgData.slice(-10); // 2 sec @ 5 Hz
-          const wMin = Math.min(...window);
-          const wMax = Math.max(...window);
-          const threshold = wMin + (wMax - wMin) * 0.5;
-
-          let peaks = 0;
-          for(let i=1;i<window.length;i++){
-            if(window[i-1] < threshold && window[i] >= threshold) peaks++;
-          }
-
-          const rawBPM = Math.round(peaks * 30); // 2 sec → 60 sec
-
-          if(rawBPM > 25 && rawBPM < 220){
-            // Exponential smoothing
-            smoothedBPM = Math.round(smoothedBPM * 0.6 + rawBPM * 0.4);
-            lastBPM = smoothedBPM;
-            renderBPM(smoothedBPM);
-            if(isMonitoring) updateDiagnosis(null,smoothedBPM);
+        // BPM computation
+        if(ecgBuffer.length>=SAMPLE_RATE*2){
+          const rawBpm = computeBPM(ecgBuffer.slice(-SAMPLE_RATE*3), SAMPLE_RATE);
+          if(rawBpm>25 && rawBpm<250){
+            smoothedBpm = Math.round(smoothedBpm*.55 + rawBpm*.45);
+            renderBpm(smoothedBpm);
+            if(isMonitoring) setDiagnosis(null,smoothedBpm);
           }
         }
-
-        bpmMeta.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+        bpmMeta.textContent = `Last: ${new Date().toLocaleTimeString()}`;
       });
 
-      // ────────── Render BPM ──────────
-      function renderBPM(bpm){
-        bpmDisplay.textContent = bpm;
-        if(bpm>=60 && bpm<=100) bpmDisplay.style.color = '#3FB950';
-        else if((bpm>=50 && bpm<60)||(bpm>100 && bpm<=120)) bpmDisplay.style.color = '#D29922';
-        else bpmDisplay.style.color = '#DA3633';
+      // ──────── Render ────────
+      function renderBpm(bpm){
+        bpmDisplay.textContent=bpm;
+        if(bpm>=60&&bpm<=100) bpmDisplay.style.color='var(--green-glow)';
+        else if((bpm>=50&&bpm<60)||(bpm>100&&bpm<=120)) bpmDisplay.style.color='var(--orange)';
+        else bpmDisplay.style.color='var(--red-glow)';
       }
 
-      // ────────── AI Diagnosis Engine ──────────
-      function updateDiagnosis(override,bpm){
-        let label='',color='',bg='',detail='',conf='';
-
+      function setDiagnosis(override,bpm){
+        let label,color,bg,notes;
         if(override==='NO_SIGNAL'){
-          label='NO SIGNAL'; color='#7D8590'; bg='#161B22';
-          detail='⚠ Sensor disconnected or leads off.\n→ Check electrode placement.\n→ Ensure AD8232 is powered.';
-          conf='0%';
-          triggerAlarm(true);
-        } else if(bpm>=60 && bpm<=100){
-          label='NORMAL SINUS RHYTHM'; color='#3FB950'; bg='#0F2918';
-          detail=`✓ Regular sinus rhythm at ${bpm} BPM.\n✓ P‑waves present and upright.\n✓ QRS duration < 120 ms.\n✓ No ectopy detected.`;
-          conf='96%';
-          triggerAlarm(false);
-        } else if(bpm>40 && bpm<50){
-          label='SINUS BRADYCARDIA'; color='#D29922'; bg='#1F1A0A';
-          detail=`⚠ Heart rate below normal: ${bpm} BPM.\n→ May be normal in athletes.\n→ Monitor for dizziness/fatigue.`;
-          conf='84%';
-          triggerAlarm(true);
-        } else if(bpm>100 && bpm<=120){
-          label='SINUS TACHYCARDIA'; color='#D29922'; bg='#1F1A0A';
-          detail=`⚠ Elevated rate: ${bpm} BPM.\n→ Possible stress, pain, or fever.\n→ Evaluate underlying cause.`;
-          conf='87%';
-          triggerAlarm(true);
+          label='NO SIGNAL'; color='var(--text-faint)'; bg='#10161C';
+          notes='⚠ Sensor disconnected.\n→ Verify electrode placement.\n→ Check AD8232 power.';
+          alarm(true);
+        } else if(bpm>=60&&bpm<=100){
+          label='NORMAL SINUS RHYTHM'; color='var(--green-glow)'; bg='#0A1F12';
+          notes=`✓ Regular rhythm: ${bpm} BPM.\n✓ P-waves upright.\n✓ QRS < 120 ms.\n✓ No ectopy.`;
+          alarm(false);
+        } else if(bpm>40&&bpm<50){
+          label='SINUS BRADYCARDIA'; color='var(--orange)'; bg='#1A1608';
+          notes=`⚠ ${bpm} BPM — below normal.\n→ May be benign in athletes.\n→ Monitor for symptoms.`;
+          alarm(true);
+        } else if(bpm>100&&bpm<=120){
+          label='SINUS TACHYCARDIA'; color='var(--orange)'; bg='#1A1608';
+          notes=`⚠ ${bpm} BPM — elevated.\n→ Possible stress/fever.\n→ Evaluate cause.`;
+          alarm(true);
         } else if(bpm>120){
-          label='⚠ ABNORMALITY DETECTED'; color='#DA3633'; bg='#1F0A0A';
-          detail=`⚠ Tachyarrhythmia suspected.\n→ Irregular R‑R intervals.\n→ Urgent medical evaluation advised.\n→ Rate: ${bpm} BPM.`;
-          conf='92%';
-          triggerAlarm(true);
+          label='⚠ ABNORMALITY DETECTED'; color='var(--red-glow)'; bg='#1A0A0A';
+          notes=`⚠ Tachyarrhythmia likely.\n→ Irregular R-R intervals.\n→ URGENT evaluation needed.\n→ Rate: ${bpm} BPM.`;
+          alarm(true);
         } else {
-          label='ANALYZING…'; color='#E3B341'; bg='#1A1A0A';
-          detail='Gathering additional data for accurate diagnosis…';
-          conf='--';
-          triggerAlarm(false);
+          label='ANALYZING…'; color='var(--yellow)'; bg='#1A1808';
+          notes='Gathering data for analysis…';
+          alarm(false);
         }
-
-        diagBadge.textContent = label;
-        diagBadge.style.color = color;
-        diagBadge.style.background = bg;
-        diagDetail.textContent = detail;
+        diagBadge.textContent=label;diagBadge.style.color=color;diagBadge.style.background=bg;
+        diagNotes.textContent=notes;
       }
 
-      // ────────── Alarm System ──────────
-      function triggerAlarm(active){
-        dashboard.classList.toggle('alarm-active', active);
-        if(active && !isMuted) playAlarmBeep();
-        else stopAlarm();
+      // ──────── Alarm ────────
+      function alarm(on){
+        dashboard.classList.toggle('alarm-flash',on);
+        if(on && !isMuted) scheduleBeep();
+        else if(!on) stopAlarm();
       }
 
-      function playAlarmBeep(){
+      function scheduleBeep(){
         try{
-          if(!audioCtx) audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+          if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
           if(audioCtx.state==='suspended') audioCtx.resume();
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'square';
-          osc.frequency.value = 880;
-          gain.gain.value = 0.2;
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
-          setTimeout(()=>osc.stop(),120);
-          setTimeout(()=>{if(dashboard.classList.contains('alarm-active')) playAlarmBeep();},350);
-        }catch(e){/* user gesture required sometimes */}
+          const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+          o.type='square';o.frequency.value=880;g.gain.value=.22;
+          o.connect(g);g.connect(audioCtx.destination);
+          o.start();setTimeout(()=>o.stop(),120);
+          alarmTimeout=setTimeout(()=>{if(dashboard.classList.contains('alarm-flash')) scheduleBeep();},350);
+        }catch(e){/* handle gesture requirement */}
       }
 
       function stopAlarm(){
-        if(audioCtx && audioCtx.state==='running') audioCtx.suspend();
+        if(alarmTimeout) clearTimeout(alarmTimeout);
+        if(audioCtx&&audioCtx.state==='running') audioCtx.suspend();
       }
 
-      // ────────── Controls ──────────
-      window.toggleMonitoring = function(){
-        isMonitoring = !isMonitoring;
+      // ──────── Controls ────────
+      window.toggleMonitor=function(){
+        isMonitoring=!isMonitoring;
         if(isMonitoring){
-          btnMonitor.textContent = '⏸ STOP MONITORING';
-          btnMonitor.classList.add('active');
-          btnMute.style.display = 'block';
-          bpmMeta.textContent = 'Monitoring active…';
+          btnMonitor.textContent='⏸ STOP MONITORING';btnMonitor.classList.add('on');
+          btnMute.style.display='block';bpmMeta.textContent='Monitoring…';
         } else {
-          btnMonitor.textContent = '▶ START MONITORING';
-          btnMonitor.classList.remove('active');
-          btnMute.style.display = 'none';
-          dashboard.classList.remove('alarm-active');
-          stopAlarm();
-          bpmMeta.textContent = 'Monitoring paused';
+          btnMonitor.textContent='▶ START MONITORING';btnMonitor.classList.remove('on');
+          btnMute.style.display='none';dashboard.classList.remove('alarm-flash');stopAlarm();
+          bpmMeta.textContent='Paused';
         }
       };
 
-      window.toggleMute = function(){
-        isMuted = !isMuted;
-        btnMute.textContent = isMuted ? '🔊 UNMUTE' : '🔇 MUTE ALARM';
+      window.toggleMute=function(){
+        isMuted=!isMuted;
+        btnMute.textContent=isMuted?'🔊 UNMUTE':'🔇 MUTE ALARM';
         if(isMuted) stopAlarm();
       };
 
-      // ────────── History Table ──────────
+      // ──────── History ────────
       rtdb.ref('/patient_history').on('value',snap=>{
-        const data = snap.val();
-        if(!data){
-          historyBody.innerHTML = '<tr><td colspan="5" style="color:#484F58">No historical records found.</td></tr>';
-          return;
-        }
-        const records = Object.values(data).reverse().slice(0,10);
-        historyBody.innerHTML = records.map(r=>`
-          <tr>
-            <td>${r.date||'--'}</td>
-            <td>${r.time||'--'}</td>
-            <td>${r.bpm||'--'}</td>
-            <td>${r.result||'--'}</td>
-            <td>${r.confidence||'--'}</td>
-          </tr>
+        const data=snap.val();
+        if(!data){historyBody.innerHTML='<tr><td colspan="5" style="color:var(--text-faint)">No records</td></tr>';return;}
+        historyBody.innerHTML=Object.values(data).reverse().slice(0,10).map(r=>`
+          <tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>
         `).join('');
       });
 
