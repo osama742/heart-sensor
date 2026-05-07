@@ -17,8 +17,8 @@
     .logo span{font-weight:400;font-size:11px;color:var(--dim)}
     .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);font-family:var(--mono)}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-    .dot.danger{background:var(--red);animation:none}
     .dot.warn{background:var(--orange);animation:none}
+    .dot.danger{background:var(--red);animation:none}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
     .grid{display:grid;grid-template-columns:1fr;gap:16px;padding:20px 24px;max-width:1200px;margin:0 auto}
     .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
@@ -44,7 +44,7 @@
     .alarm-flash{animation:alarmPulse .55s infinite}
     @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(220,38,38,0)}50%{box-shadow:inset 0 0 60px rgba(220,38,38,.15)}}
     @media print{body{background:#fff!important}.header,.btn,.no-print{display:none!important}.card{box-shadow:none;border:1px solid #ccc}.chart-wrap{height:300px}}
-    .debug-panel{font-family:var(--mono);font-size:11px;color:var(--dim);background:#f9fafb;padding:8px 12px;border-radius:8px;margin-top:8px}
+    #beatFlash { transition: background-color 0.1s; }
   </style>
 </head>
 <body>
@@ -55,10 +55,10 @@
 </header>
 
 <main class="grid" id="dash">
-  <div class="card">
+  <div class="card" id="beatFlash">
     <div class="card-label">تخطيط القلب — 25 mm/s</div>
     <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
-    <div class="debug-panel" id="debugPanel">قيمة خام: -- | الحالة: --</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px" id="debugInfo">⚡ في انتظار البيانات...</div>
   </div>
 
   <div class="row2">
@@ -97,96 +97,127 @@
   });
   const rtdb=firebase.database();
 
-  const FS=5,MAX=500;
-  let buf=[],mon=false,muted=false,audioCtx=null,smBpm=null,alarmT=null;
+  const FS=5, MAX=500;
+  let buf=[], mon=false, muted=false, audioCtx=null, smBpm=null, alarmT=null;
+  let beatCount=0, beatWindowStart=0;
   const $=id=>document.getElementById(id);
 
   const ctx=$('ecgCanvas').getContext('2d');
   const chart=new Chart(ctx,{
     type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#dc2626',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
-      scales:{x:{display:true,grid:{color:'#e5e7eb'}},y:{min:0,max:4095,grid:{color:'#e5e7eb'}}},
+      scales:{x:{display:true,grid:{color:'#e5e7eb'}},y:{min:1650,max:2100,grid:{color:'#e5e7eb'},ticks:{stepSize:50}}},
       plugins:{legend:{display:false}}
     }
   });
 
-  function calcBPM(sig){
-    if(sig.length<15) return null;
-    const win=sig.slice(-15),min=Math.min(...win),max=Math.max(...win);
-    if(max-min < 10) return null; // Skip if signal is almost flat
-    const thr=min+(max-min)*0.4;
-    const peaks=[],minDist=2;
-    for(let i=1;i<win.length-1;i++){
-      if(win[i]>thr&&win[i]>win[i-1]&&win[i]>win[i+1]&&(peaks.length===0||i-peaks[peaks.length-1]>=minDist)) peaks.push(i);
-    }
-    if(peaks.length<2) return peaks.length===1?20:null;
-    let totalRR=0;
-    for(let i=1;i<peaks.length;i++) totalRR+=(peaks[i]-peaks[i-1])/FS;
-    const bpm=Math.round(60/(totalRR/(peaks.length-1)));
-    return(bpm>=25&&bpm<=220)?bpm:null;
-  }
+  // أبسط وأقوى خوارزمية BPM: تعتمد على تغير الإشارة فقط
+  let lastVal = 0;
+  let rising = false;
+  let beatDetected = false;
+  const PEAK_THRESH = 15; // الحد الأدنى للتغير الذي نعتبره "نبضة"
 
-  rtdb.ref('/patient').on('value',snap=>{
-    const d=snap.val();
-    if(!d) return;
-    const v=d.ecg_value??0, s=d.status??'disconnected';
-    $('#debugPanel').innerHTML = `قيمة خام: ${v} | الحالة: ${s}`;
-    if(s==='ok' && v>0){
-      $('#led').className='dot';$('#ledText').textContent='متصل — مباشر';
-      $('#signalIcon').style.opacity=1;$('#signalText').textContent='متصل';$('#signalText').style.color='var(--green)';
+  rtdb.ref('/patient').on('value', snap => {
+    const d = snap.val();
+    if (!d) return;
+    const v = d.ecg_value ?? 0, s = d.status ?? 'disconnected';
+    $('#debugInfo').textContent = `ECG: ${v} | الحالة: ${s} | نبضات مكتشفة: ${beatCount}`;
+
+    if (s === 'ok' && v > 0) {
+      $('#led').className='dot'; $('#ledText').textContent='متصل — مباشر';
+      $('#signalIcon').style.opacity=1; $('#signalText').textContent='متصل'; $('#signalText').style.color='var(--green)';
     } else {
-      $('#led').className='dot warn';$('#ledText').textContent='الأقطاب منفصلة';
-      $('#signalIcon').style.opacity=0.4;$('#signalText').textContent='منفصل';$('#signalText').style.color='var(--red)';
-      if(mon) setDiag('NO_SIGNAL');
+      $('#led').className='dot warn'; $('#ledText').textContent='الأقطاب منفصلة';
+      $('#signalIcon').style.opacity=0.4; $('#signalText').textContent='منفصل'; $('#signalText').style.color='var(--red)';
+      if (mon) setDiag('NO_SIGNAL');
       return;
     }
-    buf.push(v);if(buf.length>MAX) buf.shift();
-    chart.data.datasets[0].data=[...buf];
+
+    buf.push(v); if (buf.length > MAX) buf.shift();
+    chart.data.datasets[0].data = [...buf];
     chart.update('none');
-    if(mon && buf.length>=15 && s==='ok'){
-      const raw=calcBPM(buf);
-      if(raw!==null){smBpm=smBpm?Math.round(smBpm*0.5+raw*0.5):raw;$('#bpmDisp').textContent=smBpm;
-        if(smBpm>=60&&smBpm<=100)$('#bpmDisp').style.color='var(--green)';
-        else if((smBpm>=50&&smBpm<60)||(smBpm>100&&smBpm<=120))$('#bpmDisp').style.color='var(--orange)';
-        else $('#bpmDisp').style.color='var(--red)';
+
+    // اكتشاف النبضات بطريقة بسيطة جداً
+    if (mon && s === 'ok') {
+      // اكتشاف ارتفاع الإشارة (rising edge)
+      if (v > lastVal + PEAK_THRESH && !rising) {
+        rising = true;
       }
+      // اكتشاف قمة (بعد أن كانت ترتفع، بدأت تنخفض)
+      if (rising && v < lastVal) {
+        beatCount++;
+        rising = false;
+        
+        // وميض بصري عند كل نبضة
+        $('#beatFlash').style.backgroundColor = '#fef2f2';
+        setTimeout(() => { $('#beatFlash').style.backgroundColor = ''; }, 150);
+      }
+      lastVal = v;
+
+      // حساب BPM كل 3 ثوانٍ
+      if (!beatWindowStart) beatWindowStart = Date.now();
+      if (Date.now() - beatWindowStart >= 3000) {
+        const seconds = (Date.now() - beatWindowStart) / 1000;
+        const bpm = Math.round((beatCount / seconds) * 60);
+        if (bpm >= 25 && bpm <= 220) {
+          smBpm = smBpm ? Math.round(smBpm * 0.5 + bpm * 0.5) : bpm;
+          $('#bpmDisp').textContent = smBpm;
+          if (smBpm >= 60 && smBpm <= 100) $('#bpmDisp').style.color = 'var(--green)';
+          else if ((smBpm >= 50 && smBpm < 60) || (smBpm > 100 && smBpm <= 120)) $('#bpmDisp').style.color = 'var(--orange)';
+          else $('#bpmDisp').style.color = 'var(--red)';
+          setDiag(null);
+        }
+        beatCount = 0;
+        beatWindowStart = Date.now();
+      }
+    } else {
+      lastVal = v;
     }
-    if(mon) setDiag(null);
   });
 
-  function setDiag(ov){
-    if(!mon) return;
-    let l,c,bg,dt;
-    if(ov==='NO_SIGNAL'||!smBpm){l='لا توجد إشارة';c='var(--dim)';bg='#f3f4f6';dt='⚠ المستشعر منفصل.';alarm(true)}
-    else if(smBpm>=60&&smBpm<=100){l='إيقاع جيبي طبيعي';c='var(--green)';bg='#f0fdf4';dt=`✓ إيقاع منتظم: ${smBpm} نبضة/دقيقة.`;alarm(false)}
-    else if(smBpm>40&&smBpm<50){l='بطء قلب جيبي';c='var(--orange)';bg='#fff7ed';dt=`⚠ معدل منخفض: ${smBpm}.`;alarm(true)}
-    else if(smBpm>100&&smBpm<=120){l='تسرع قلب جيبي';c='var(--orange)';bg='#fff7ed';dt=`⚠ معدل مرتفع: ${smBpm}.`;alarm(true)}
-    else if(smBpm>120){l='⚠ اضطراب نظم القلب';c='var(--red)';bg='#fef2f2';dt=`⚠ تسرع غير طبيعي: ${smBpm}.`;alarm(true)}
-    else {l='جاري التحليل…';c='var(--orange)';bg='#fffbeb';dt='جمع البيانات…';alarm(false)}
-    $('#diagBadge').textContent=l;$('#diagBadge').style.color=c;$('#diagBadge').style.background=bg;$('#diagDetail').textContent=dt;
+  function setDiag(ov) {
+    if (!mon) return;
+    let l, c, bg, dt;
+    if (ov === 'NO_SIGNAL' || !smBpm) { l='لا توجد إشارة'; c='var(--dim)'; bg='#f3f4f6'; dt='⚠ المستشعر منفصل.'; alarm(true); }
+    else if (smBpm >= 60 && smBpm <= 100) { l='إيقاع جيبي طبيعي'; c='var(--green)'; bg='#f0fdf4'; dt=`✓ إيقاع منتظم: ${smBpm} نبضة/دقيقة.`; alarm(false); }
+    else if (smBpm > 40 && smBpm < 50) { l='بطء قلب جيبي'; c='var(--orange)'; bg='#fff7ed'; dt=`⚠ معدل منخفض: ${smBpm}.`; alarm(true); }
+    else if (smBpm > 100 && smBpm <= 120) { l='تسرع قلب جيبي'; c='var(--orange)'; bg='#fff7ed'; dt=`⚠ معدل مرتفع: ${smBpm}.`; alarm(true); }
+    else if (smBpm > 120) { l='⚠ اضطراب نظم القلب'; c='var(--red)'; bg='#fef2f2'; dt=`⚠ تسرع غير طبيعي: ${smBpm}.`; alarm(true); }
+    else { l='جاري التحليل…'; c='var(--orange)'; bg='#fffbeb'; dt='جمع البيانات…'; alarm(false); }
+    $('#diagBadge').textContent=l; $('#diagBadge').style.color=c; $('#diagBadge').style.background=bg; $('#diagDetail').textContent=dt;
   }
 
-  function alarm(on){$('#dash').classList.toggle('alarm-flash',on);if(on&&!muted) beep();else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend()}}
-  function beep(){
-    try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
-    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=880;g.gain.value=.2;
-    o.connect(g);g.connect(audioCtx.destination);o.start();setTimeout(()=>o.stop(),120);
-    alarmT=setTimeout(()=>{if($('#dash').classList.contains('alarm-flash'))beep()},350);}catch(e){}
+  function alarm(on) { $('#dash').classList.toggle('alarm-flash', on); if (on && !muted) beep(); else if (!on) { if (alarmT) clearTimeout(alarmT); if (audioCtx) audioCtx.suspend(); } }
+  function beep() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'square'; o.frequency.value = 880; g.gain.value = 0.2;
+      o.connect(g); g.connect(audioCtx.destination); o.start(); setTimeout(() => o.stop(), 120);
+      alarmT = setTimeout(() => { if ($('#dash').classList.contains('alarm-flash')) beep(); }, 350);
+    } catch (e) {}
   }
 
-  window.toggleMon=function(){
-    mon=!mon;
-    if(mon){$('#btnMon').textContent='⏸ إيقاف المراقبة';$('#btnMon').classList.add('on');$('#btnMute').style.display='block'}
-    else {$('#btnMon').textContent='▶ بدء المراقبة';$('#btnMon').classList.remove('on');$('#btnMute').style.display='none';$('#dash').classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend();smBpm=null;$('#bpmDisp').textContent='---';$('#diagBadge').textContent='بانتظار البيانات';$('#diagBadge').style.color='var(--dim)';$('#diagBadge').style.background='#f3f4f6'}
+  window.toggleMon = function() {
+    mon = !mon;
+    if (mon) {
+      $('#btnMon').textContent = '⏸ إيقاف المراقبة'; $('#btnMon').classList.add('on'); $('#btnMute').style.display = 'block';
+      beatCount = 0; beatWindowStart = Date.now(); smBpm = null; lastVal = 0; rising = false;
+      $('#bpmDisp').textContent = '---'; $('#bpmDisp').style.color = 'var(--dim)';
+    } else {
+      $('#btnMon').textContent = '▶ بدء المراقبة'; $('#btnMon').classList.remove('on'); $('#btnMute').style.display = 'none';
+      $('#dash').classList.remove('alarm-flash'); if (alarmT) clearTimeout(alarmT); if (audioCtx) audioCtx.suspend();
+      smBpm = null; $('#bpmDisp').textContent = '---';
+    }
   };
 
-  window.toggleMute=function(){muted=!muted;$('#btnMute').textContent=muted?'🔊 إلغاء الكتم':'🔇 كتم الصوت'};
+  window.toggleMute = function() { muted = !muted; $('#btnMute').textContent = muted ? '🔊 إلغاء الكتم' : '🔇 كتم الصوت'; };
 
-  rtdb.ref('/patient_history').on('value',snap=>{
-    const d=snap.val();
-    if(!d){$('#histBody').innerHTML='<tr><td colspan="5">لا توجد سجلات</td></tr>';return}
-    $('#histBody').innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
+  rtdb.ref('/patient_history').on('value', snap => {
+    const d = snap.val();
+    if (!d) { $('#histBody').innerHTML = '<tr><td colspan="5">لا توجد سجلات</td></tr>'; return; }
+    $('#histBody').innerHTML = Object.values(d).reverse().slice(0, 10).map(r => `<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
   });
 })();
 </script>
