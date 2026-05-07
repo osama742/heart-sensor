@@ -2,204 +2,521 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heart Sensor - مراقبة القلب</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>مراقب القلب الحي | نظام تشخيع ذكي</title>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <!-- Firebase (modular v9+) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <style>
-    :root{--bg:#f5f5f5;--card:#fff;--border:#e0e0e0;--green:#2e7d32;--red:#c62828;--orange:#ef6c00;--text:#212121;--dim:#757575;--mono:'IBM Plex Mono',monospace;--arabic:'Tajawal',sans-serif}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font-family:var(--arabic);min-height:100vh}
-    .header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border-bottom:2px solid var(--green);position:sticky;top:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-    .logo{font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);display:flex;align-items:center;gap:8px}
-    .logo span{font-weight:400;font-size:11px;color:var(--dim)}
-    .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);font-family:var(--mono)}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-    .dot.warn{background:var(--orange);animation:none}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .grid{display:grid;grid-template-columns:1fr;gap:14px;padding:16px 20px;max-width:1100px;margin:0 auto}
-    .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-    @media(max-width:768px){.row2{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .card-label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;font-weight:600}
-    .chart-wrap{height:320px;background:#fafafa;border-radius:8px;border:1px solid #e0e0e0;padding:4px}
-    canvas{width:100%!important;height:100%!important}
-    .bpm-block{text-align:center;padding:10px 0}
-    .bpm-num{font-family:var(--mono);font-size:72px;font-weight:700;line-height:1}
-    .bpm-sub{font-size:12px;color:var(--dim);margin-top:4px}
-    .diag-badge{display:block;padding:10px 14px;border-radius:20px;font-weight:700;font-size:12px;text-align:center;width:100%}
-    .diag-detail{font-size:10px;color:var(--dim);margin-top:8px;line-height:1.7;background:#fafafa;padding:8px;border-radius:6px;font-family:var(--mono);white-space:pre-line}
-    .btn{display:block;width:100%;padding:10px 14px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--arabic);margin-top:8px;text-align:center}
-    .btn-start{background:var(--green);color:#fff}
-    .btn-start.on{background:var(--red)}
-    .btn-mute{background:#fef2f2;color:var(--red);border-color:#fecaca;display:none}
-    .btn-print{background:#f5f5f5;color:var(--dim);border-color:var(--border)}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{padding:10px 6px;text-align:right;color:var(--dim);font-weight:600;font-size:9px;letter-spacing:.5px;border-bottom:2px solid #e0e0e0}
-    td{padding:8px 6px;border-bottom:1px solid #f0f0f0;color:var(--text)}
-    .alarm-flash{animation:alarmPulse .55s infinite}
-    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(198,40,40,0)}50%{box-shadow:inset 0 0 60px rgba(198,40,40,.12)}}
-    @media print{body{background:#fff!important}.header,.btn,.no-print{display:none!important}.card{box-shadow:none;border:1px solid #ccc}.chart-wrap{height:300px}}
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', 'Tahoma', sans-serif;
+    }
+    body {
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s;
+    }
+    body.dark {
+      background: #121826;
+      color: #eef;
+    }
+    .container {
+      max-width: 1300px;
+      margin: auto;
+      background: rgba(255,255,255,0.9);
+      border-radius: 32px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+      backdrop-filter: blur(2px);
+    }
+    body.dark .container {
+      background: #1e2a3a;
+      color: #eef;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #2c7da0;
+      border: none;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background: #1f5e7e;
+      transform: scale(1.02);
+    }
+    .mute-btn {
+      background: #6c757d;
+    }
+    .mute-btn.muted {
+      background: #dc3545;
+    }
+    .theme-btn {
+      background: #495057;
+    }
+    .status-card {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 25px 0;
+    }
+    .card {
+      flex: 1;
+      background: white;
+      border-radius: 24px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.05);
+      transition: all 0.2s;
+    }
+    body.dark .card {
+      background: #0f1724;
+    }
+    .bpm {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .diagnosis {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .confidence {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    .chart-container {
+      position: relative;
+      height: 280px;
+      margin: 20px 0;
+    }
+    .alarm-border {
+      transition: all 0.1s;
+      border-radius: 32px;
+    }
+    .alarm-active {
+      box-shadow: 0 0 0 3px red, 0 0 0 6px rgba(255,0,0,0.3);
+      animation: pulse-red 0.5s infinite;
+    }
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 0 0 red, 0 0 0 4px rgba(255,0,0,0.4); }
+      100% { box-shadow: 0 0 0 8px rgba(255,0,0,0), 0 0 0 12px rgba(255,0,0,0); }
+    }
+    .history-section {
+      margin-top: 30px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    @media print {
+      body, .container {
+        background: white;
+        color: black;
+        padding: 0;
+        margin: 0;
+      }
+      .controls, .theme-btn, .mute-btn, .history-section, .no-print {
+        display: none;
+      }
+      .card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+      }
+      .alarm-active {
+        box-shadow: none;
+        animation: none;
+      }
+    }
+    footer {
+      text-align: center;
+      font-size: 0.7rem;
+      margin-top: 20px;
+      opacity: 0.6;
+    }
+    .badge {
+      background: #2c7da0;
+      padding: 4px 12px;
+      border-radius: 50px;
+      color: white;
+      font-size: 0.7rem;
+    }
   </style>
 </head>
 <body>
-
-<header class="header">
-  <div class="logo">🫀 HEART SENSOR <span>| مراقبة القلب</span></div>
-  <div class="status"><div class="dot" id="led"></div><span id="ledText">جاري الاتصال…</span></div>
-</header>
-
-<main class="grid" id="dash">
-  <div class="card">
-    <div class="card-label">تخطيط القلب — ECG · Lead II · 25 mm/s</div>
-    <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
+<div class="container alarm-border" id="mainContainer">
+  <h1>
+    📈 نظام مراقبة القلب الذكي
+    <span class="badge" id="liveBadge">🟢 حي</span>
+  </h1>
+  <div class="controls">
+    <button id="startBtn">▶️ بدء المراقبة</button>
+    <button id="muteBtn" class="mute-btn">🔊 كتم الإنذار</button>
+    <button id="themeBtn" class="theme-btn">🌙 الوضع الداكن</button>
+    <button id="printBtn" class="theme-btn">🖨️ طباعة التقرير</button>
   </div>
 
-  <div class="row2">
+  <div class="status-card">
     <div class="card">
-      <div class="card-label">معدل ضربات القلب</div>
-      <div class="bpm-block"><div class="bpm-num" id="bpmDisp">---</div><div class="bpm-sub">نبضة / دقيقة</div></div>
+      <div>❤️ معدل نبضات القلب (BPM)</div>
+      <div class="bpm" id="bpmValue">--</div>
+      <div id="bpmColor" style="height: 6px; width: 80%; margin: 8px auto; border-radius: 4px;"></div>
     </div>
     <div class="card">
-      <div class="card-label">حالة الإشارة</div>
-      <div style="text-align:center;padding:20px 0;font-size:40px" id="signalIcon">🫀</div>
-      <div style="text-align:center;font-weight:700;font-size:14px" id="signalText">متصل</div>
+      <div>🤖 التشخيص المبدئي (AI)</div>
+      <div class="diagnosis" id="diagnosisText">⏳ انتظار البيانات...</div>
+      <div class="confidence" id="confidenceText">الثقة: --</div>
     </div>
     <div class="card">
-      <div class="card-label">تحليل الذكاء الاصطناعي</div>
-      <div class="diag-badge" id="diagBadge" style="background:#f5f5f5;color:var(--dim)">لا توجد إشارة</div>
-      <div class="diag-detail" id="diagDetail">بانتظار بيانات ECG…</div>
-      <button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ بدء المراقبة</button>
-      <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 كتم الصوت</button>
+      <div>📡 حالة المستشعر</div>
+      <div id="sensorStatus" style="font-weight: bold;">🟡 جاري الاتصال</div>
+      <div id="lastUpdate">آخر تحديث: --</div>
     </div>
   </div>
 
-  <div class="card no-print">
-    <div class="card-label">سجل المريض</div>
-    <table><thead><tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>النتيجة</th><th>الثقة</th></tr></thead><tbody id="histBody"><tr><td colspan="5" style="color:var(--dim)">لا توجد سجلات</td></tr></tbody></table>
-    <button class="btn btn-print" onclick="window.print()" style="margin-top:12px">🖨 طباعة التخطيط</button>
+  <div class="chart-container">
+    <canvas id="ecgCanvas"></canvas>
   </div>
-</main>
+
+  <div class="history-section">
+    <h3>📋 تاريخ القراءات (آخر 10)</h3>
+    <table id="historyTable">
+      <thead>
+        <tr><th>الوقت</th><th>BPM</th><th>التشخيص</th><th>الثقة</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <footer>تم التطوير باستخدام Firebase + خوارزمية BPM محسّنة. نظام إنذار صوتي/بصري.</footer>
+</div>
 
 <script>
-(function(){
-  firebase.initializeApp({
-    apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
-    authDomain:"sensor-7042b.firebaseapp.com",
-    databaseURL:"https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId:"sensor-7042b"
-  });
-  const rtdb=firebase.database();
-  const FS=5,MAX=500;
-  let buf=[],mon=false,muted=false,audioCtx=null,smBpm=0,alarmT=null,yMin=1700,yMax=1900;
-  const $=id=>document.getElementById(id);
+  // ----------------------------- إعدادات Firebase -----------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
+    databaseURL: "https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "sensor-7042b"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  const ctx=$('ecgCanvas').getContext('2d');
-  const chart=new Chart(ctx,{
-    type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#c62828',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,scales:{x:{display:false,grid:{color:'#e0e0e0'}},y:{min:1700,max:1900,grid:{color:'#e0e0e0'},ticks:{display:false}}},plugins:{legend:{display:false}}}
-  });
+  // ----------------------------- متغيرات عالمية -----------------------------
+  let chart;                // كائن Chart.js
+  let ecgDataPoints = [];   // نقاط الرسم البياني (آخر 200 قيمة)
+  let lastValidECG = 0;
+  let lastBPM = 0;
+  let alarmEnabled = false;     // ما يفعل الإنذار إلا بعد الضغط على "بدء المراقبة"
+  let soundMuted = false;
+  let audioCtx = null;
+  let alarmInterval = null;
+  let currentColorClass = '';
+  let historyList = [];      // آخر 10 تسجيلات
 
-  function peaks(sig){
-    if(sig.length<10) return[];
-    let s=0;for(let i=0;i<sig.length;i++)s+=sig[i];
-    const thr=s/sig.length,p=[];
-    for(let i=1;i<sig.length-1;i++){
-      if(sig[i]<=thr)continue;
-      if(sig[i]<=sig[i-1]||sig[i]<=sig[i+1])continue;
-      if(p.length&&i-p[p.length-1]<2)continue;
-      p.push(i);
+  // ----------------------------- دوال مساعدة -----------------------------
+  function getCurrentTimeString() {
+    return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  // تشغيل صوت إنذار (3 صفارات سريعة)
+  function playAlarmSound() {
+    if (soundMuted || !alarmEnabled) return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    return p;
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.2, now + i * 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.2 + 0.25);
+      osc.start(now + i * 0.2);
+      osc.stop(now + i * 0.2 + 0.25);
+    }
   }
 
-  function bpm(sig){
-    const p=peaks(sig);
-    if(p.length<2)return 0;
-    const rr=[];
-    for(let i=1;i<p.length;i++)rr.push((p[i]-p[i-1])/FS);
-    const avg=rr.reduce((a,b)=>a+b,0)/rr.length;
-    const v=Math.round(60/avg);
-    return(v>20&&v<250)?v:0;
+  // تفعيل/إلغاء الإنذار البصري
+  function updateAlarmVisual(active) {
+    const container = document.getElementById('mainContainer');
+    if (active && alarmEnabled) {
+      container.classList.add('alarm-active');
+    } else {
+      container.classList.remove('alarm-active');
+    }
   }
 
-  rtdb.ref('/patient').on('value',snap=>{
-    const d=snap.val();
-    if(!d)return;
-    const v=d.ecg_value??0,s=d.status??'disconnected';
-    if(s==='ok'&&v!==0){
-      $('led').className='dot';$('ledText').textContent='متصل — مباشر';
-      $('signalIcon').style.opacity=1;$('signalText').textContent='متصل';$('signalText').style.color='var(--green)';
-    }else{
-      $('led').className='dot warn';$('ledText').textContent='الأقطاب منفصلة';
-      $('signalIcon').style.opacity=.4;$('signalText').textContent='منفصل';$('signalText').style.color='var(--red)';
-      if(mon) setDiag('NO_SIGNAL',0);
+  // خوارزمية BPM ذكية تعمل على بيانات متفرقة (حتى 200ms بين العينات)
+  // نحتفظ بآخر 20 قيمة ونحاول كشف القمم بواسطة عتبة متحركة وفاصل مقاوم
+  class OnlineBPMDetector {
+    constructor(windowSize = 15, fs = 5) {
+      this.buffer = [];        // يخزن قيم ECG الخام
+      this.windowSize = windowSize;
+      this.fs = fs;            // 5 Hz
+      this.refractoryFrames = Math.floor(fs * 0.25); // 1.25 عينة (نستخدم 2)
+      this.lastPeakIndex = -10;
+      this.peakIntervals = [];
+    }
+
+    addSample(value) {
+      this.buffer.push(value);
+      if (this.buffer.length > this.windowSize * 2) this.buffer.shift();
+    }
+
+    computeBPM() {
+      if (this.buffer.length < this.windowSize) return 0;
+      // 1. عتبة ديناميكية = متوسط آخر 15 قيمة * 0.8 + 0.2*max
+      const recent = this.buffer.slice(-this.windowSize);
+      const avg = recent.reduce((a,b)=>a+b,0)/recent.length;
+      const maxVal = Math.max(...recent);
+      const threshold = avg * 0.6 + maxVal * 0.4;
+      if (threshold < 5) return 0;
+
+      // 2. كشف القمم
+      let peaks = [];
+      for (let i = 1; i < recent.length-1; i++) {
+        if (recent[i] > threshold && recent[i] > recent[i-1] && recent[i] >= recent[i+1]) {
+          const globalIdx = this.buffer.length - this.windowSize + i;
+          if (globalIdx - this.lastPeakIndex >= this.refractoryFrames) {
+            peaks.push(globalIdx);
+            this.lastPeakIndex = globalIdx;
+          }
+        }
+      }
+      if (peaks.length < 2) return 0;
+
+      // 3. فترات RR بالثواني (بافتراض fs عينة بالثانية)
+      let intervals = [];
+      for (let i = 1; i < peaks.length; i++) {
+        let diffFrames = peaks[i] - peaks[i-1];
+        let seconds = diffFrames / this.fs;
+        if (seconds > 0.3 && seconds < 1.8) intervals.push(seconds);
+      }
+      if (intervals.length === 0) return 0;
+      const meanRR = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+      let rawBPM = 60 / meanRR;
+      // تنعيم مع BPM السابق
+      if (lastBPM > 0 && lastBPM < 220) rawBPM = lastBPM * 0.6 + rawBPM * 0.4;
+      return Math.round(rawBPM);
+    }
+  }
+
+  const bpmDetector = new OnlineBPMDetector(15, 5);  // 5Hz مناسب للإرسال كل 200ms
+
+  // تحديث واجهة BPM والتشخيص والإنذار
+  function updateUIWithBPM(bpm, ecgValue) {
+    if (bpm === 0 || isNaN(bpm)) {
+      document.getElementById('bpmValue').innerText = '---';
+      document.getElementById('diagnosisText').innerText = '⚠️ إشارة ضعيفة';
+      document.getElementById('confidenceText').innerText = 'الثقة: منخفضة';
+      document.getElementById('sensorStatus').innerHTML = '🔴 منقطع / لا توجد إشارة';
+      updateAlarmVisual(false);
       return;
     }
-    buf.push(v);if(buf.length>MAX)buf.shift();
-    chart.data.datasets[0].data=[...buf];
-    if(buf.length>10){
-      const seg=buf.slice(-200),min=Math.min(...seg),max=Math.max(...seg),pad=Math.max((max-min)*.3,50);
-      yMin=yMin*.7+(min-pad)*.3;yMax=yMax*.7+(max+pad)*.3;
-      chart.options.scales.y.min=Math.floor(yMin/10)*10;
-      chart.options.scales.y.max=Math.ceil(yMax/10)*10;
+    lastBPM = bpm;
+    document.getElementById('bpmValue').innerText = bpm;
+    document.getElementById('sensorStatus').innerHTML = '🟢 متصل ونشط';
+    // تحديد اللون والتشخيص
+    let diagnosis = '';
+    let confidence = 0;
+    let color = '';
+    let alarm = false;
+    if (bpm >= 60 && bpm <= 100) {
+      diagnosis = 'إيقاع جيبي طبيعي';
+      confidence = 96;
+      color = '#2ecc71';
+      alarm = false;
+    } else if (bpm >= 50 && bpm < 60) {
+      diagnosis = 'بطء قلب جيبي خفيف';
+      confidence = 82;
+      color = '#f39c12';
+      alarm = false;
+    } else if (bpm > 100 && bpm <= 120) {
+      diagnosis = 'تسارع قلب جيبي';
+      confidence = 85;
+      color = '#f39c12';
+      alarm = false;
+    } else if (bpm > 120) {
+      diagnosis = '⚠️ اضطراب نظم القلب (تسرع شديد)';
+      confidence = 91;
+      color = '#e74c3c';
+      alarm = true;
+    } else if (bpm < 50 && bpm > 20) {
+      diagnosis = '⚠️ بطء قلب خطير';
+      confidence = 88;
+      color = '#e74c3c';
+      alarm = true;
+    } else {
+      diagnosis = 'إشارة غير موثوقة';
+      confidence = 40;
+      color = '#95a5a6';
+      alarm = false;
     }
-    chart.update('none');
-    if(buf.length>=FS*3){
-      const raw=bpm(buf.slice(-FS*3));
-      if(raw>0){smBpm=Math.round(smBpm*.5+raw*.5);$('bpmDisp').textContent=smBpm;
-        if(smBpm>=60&&smBpm<=100)$('bpmDisp').style.color='var(--green)';
-        else if(smBpm<50||smBpm>120)$('bpmDisp').style.color='var(--red)';
-        else $('bpmDisp').style.color='var(--orange)';
-        if(mon) setDiag(null,smBpm);
+    document.getElementById('diagnosisText').innerHTML = diagnosis;
+    document.getElementById('confidenceText').innerHTML = `الثقة: ${confidence}%`;
+    document.getElementById('bpmColor').style.backgroundColor = color;
+    
+    // إدارة الإنذار البصري والصوتي
+    if (alarm && alarmEnabled) {
+      updateAlarmVisual(true);
+      if (!soundMuted) playAlarmSound();
+      // نكرر الصوت كل 3 ثواني أثناء الخطر
+      if (alarmInterval) clearInterval(alarmInterval);
+      alarmInterval = setInterval(() => {
+        if (alarm && alarmEnabled && !soundMuted) playAlarmSound();
+      }, 2800);
+    } else {
+      updateAlarmVisual(false);
+      if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+    }
+
+    // إضافة إلى التاريخ إذا تغير BPM بشكل ملحوظ أو كل 10 ثوان تقريباً (يتم كل وصول)
+    addToHistory(bpm, diagnosis, confidence);
+  }
+
+  function addToHistory(bpm, diagnosis, confidence) {
+    const nowStr = getCurrentTimeString();
+    historyList.unshift({ time: nowStr, bpm, diagnosis, confidence: confidence+'%' });
+    if (historyList.length > 10) historyList.pop();
+    const tbody = document.querySelector('#historyTable tbody');
+    tbody.innerHTML = '';
+    historyList.forEach(h => {
+      const row = `<tr><td>${h.time}</td><td>${h.bpm}</td><td>${h.diagnosis}</td><td>${h.confidence}</td></tr>`;
+      tbody.insertAdjacentHTML('beforeend', row);
+    });
+  }
+
+  // تحديث الرسم البياني (يضيف قيمة جديدة ويزيل أول نقطة)
+  function updateChart(newValue) {
+    if (!chart) return;
+    if (ecgDataPoints.length >= 200) ecgDataPoints.shift();
+    ecgDataPoints.push(newValue);
+    chart.data.datasets[0].data = ecgDataPoints;
+    chart.update('none'); // تحديث سريع بدون حركة
+  }
+
+  // تهيئة الرسم البياني
+  function initChart() {
+    const ctx = document.getElementById('ecgCanvas').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: Array(200).fill(''),
+        datasets: [{
+          label: 'إشارة ECG',
+          data: Array(200).fill(0),
+          borderColor: '#2c7da0',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.2,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { suggestedMin: 0, suggestedMax: 4095 } }
       }
-    }
+    });
+    ecgDataPoints = Array(200).fill(0);
+  }
+
+  // مستمع Firebase – مسار /patient
+  let firebaseListener = null;
+  function startRealtime() {
+    if (firebaseListener) firebaseListener(); // إلغاء السابق
+    const patientRef = db.ref('/patient');
+    firebaseListener = patientRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      const ecg = data.ecg_value;
+      const status = data.status;
+      const lastUp = data.last_update;
+      if (typeof ecg === 'number' && ecg > 50 && ecg < 4000) {
+        lastValidECG = ecg;
+        bpmDetector.addSample(ecg);
+        const newBPM = bpmDetector.computeBPM();
+        updateChart(ecg);
+        if (newBPM > 0) updateUIWithBPM(newBPM, ecg);
+        else updateUIWithBPM(lastBPM, ecg);
+        document.getElementById('lastUpdate').innerText = `آخر تحديث: ${new Date().toLocaleTimeString()}`;
+      } else {
+        // إشارة ضعيفة أو صفر
+        updateUIWithBPM(0, 0);
+      }
+      if (status === 'disconnected') {
+        document.getElementById('sensorStatus').innerHTML = '🔴 المستشعر منفصل';
+        updateUIWithBPM(0, 0);
+      }
+    });
+  }
+
+  // أحداث الأزرار والمتغيرات
+  document.getElementById('startBtn').addEventListener('click', () => {
+    alarmEnabled = true;
+    updateAlarmVisual(false); // يعاد تفعيله عند وجود خطر
+    startRealtime();
+    document.getElementById('startBtn').innerText = '🟢 المراقبة نشطة';
+    document.getElementById('liveBadge').innerHTML = '🟢 مراقبة حية';
   });
-
-  function setDiag(ov,bp){
-    let l,c,bg,dt;
-    if(ov==='NO_SIGNAL'){l='لا توجد إشارة';c='var(--dim)';bg='#f5f5f5';dt='⚠ المستشعر منفصل.';alarm(true)}
-    else if(bp>=60&&bp<=100){l='إيقاع جيبي طبيعي';c='var(--green)';bg='#e8f5e9';dt=`✓ إيقاع منتظم: ${bp} نبضة/دقيقة.\n✓ موجات P طبيعية.\n✓ مدة QRS طبيعية.`;alarm(false)}
-    else if(bp>40&&bp<50){l='بطء قلب جيبي';c='var(--orange)';bg='#fff3e0';dt=`⚠ معدل منخفض: ${bp}.\n→ راقب الأعراض.`;alarm(true)}
-    else if(bp>100&&bp<=120){l='تسرع قلب جيبي';c='var(--orange)';bg='#fff3e0';dt=`⚠ معدل مرتفع: ${bp}.\n→ قد يكون بسبب التوتر.`;alarm(true)}
-    else if(bp>120){l='⚠ اضطراب نظم القلب';c='var(--red)';bg='#ffebee';dt=`⚠ تسرع غير طبيعي: ${bp}.\n→ ينصح بالتقييم الطبي.`;alarm(true)}
-    else {l='جاري التحليل…';c='var(--orange)';bg='#fff8e1';dt='جمع البيانات للتحليل…';alarm(false)}
-    $('diagBadge').textContent=l;$('diagBadge').style.color=c;$('diagBadge').style.background=bg;$('diagDetail').textContent=dt;
-  }
-
-  function alarm(on){
-    $('dash').classList.toggle('alarm-flash',on);
-    if(on&&!muted) beep();else if(!on){if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend();}
-  }
-
-  function beep(){
-    try{
-      if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-      if(audioCtx.state==='suspended')audioCtx.resume();
-      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-      o.type='square';o.frequency.value=880;g.gain.value=.2;
-      o.connect(g);g.connect(audioCtx.destination);
-      o.start();setTimeout(()=>o.stop(),120);
-      alarmT=setTimeout(()=>{if($('dash').classList.contains('alarm-flash'))beep();},350);
-    }catch(e){}
-  }
-
-  window.toggleMon=function(){
-    mon=!mon;
-    if(mon){$('btnMon').textContent='⏸ إيقاف المراقبة';$('btnMon').classList.add('on');$('btnMute').style.display='block'}
-    else {$('btnMon').textContent='▶ بدء المراقبة';$('btnMon').classList.remove('on');$('btnMute').style.display='none';$('dash').classList.remove('alarm-flash');if(alarmT)clearTimeout(alarmT);if(audioCtx)audioCtx.suspend();}
-  };
-
-  window.toggleMute=function(){muted=!muted;$('btnMute').textContent=muted?'🔊 إلغاء الكتم':'🔇 كتم الصوت'};
-
-  rtdb.ref('/patient_history').on('value',snap=>{
-    const d=snap.val();
-    if(!d){$('histBody').innerHTML='<tr><td colspan="5">لا توجد سجلات</td></tr>';return}
-    $('histBody').innerHTML=Object.values(d).reverse().slice(0,10).map(r=>`<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
+  document.getElementById('muteBtn').addEventListener('click', () => {
+    soundMuted = !soundMuted;
+    const btn = document.getElementById('muteBtn');
+    btn.innerText = soundMuted ? '🔇 كتم نشط' : '🔊 كتم الإنذار';
+    btn.classList.toggle('muted', soundMuted);
   });
-})();
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    const btn = document.getElementById('themeBtn');
+    btn.innerText = document.body.classList.contains('dark') ? '☀️ وضع فاتح' : '🌙 وضع داكن';
+  });
+  document.getElementById('printBtn').addEventListener('click', () => {
+    window.print();
+  });
+  
+  // بدء أولي بدون بيانات حتى يضغط المستخدم بدء (تجنب أصوات غير مرغوبة)
+  initChart();
+  // نعرض رسالة انتظار
+  document.getElementById('sensorStatus').innerHTML = '🟡 اضغط "بدء المراقبة"';
 </script>
 </body>
 </html>
