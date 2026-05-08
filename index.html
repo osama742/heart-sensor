@@ -71,7 +71,7 @@
         }
         canvas {
             width: 100%;
-            height: 350px; /* زدنا الارتفاع للتكبير */
+            height: 500px; /* تم تكبير الارتفاع العمودي */
             display: block;
             border-radius: 8px;
         }
@@ -209,7 +209,7 @@
         function resizeCanvas() {
             const container = ecgCanvas.parentElement;
             ecgCanvas.width = container.clientWidth - 20;
-            ecgCanvas.height = 350; // أكبر من قبل
+            ecgCanvas.height = 500; // الارتفاع العمودي الجديد
             width = ecgCanvas.width;
             height = ecgCanvas.height;
         }
@@ -226,10 +226,10 @@
         function drawChart() {
             ctx.clearRect(0, 0, width, height);
 
-            // شبكة أفقية
+            // شبكة أفقية (7 خطوط)
             ctx.strokeStyle = '#1a3a2a';
             ctx.lineWidth = 0.5;
-            const gridRows = 5;
+            const gridRows = 7; // زدنا عدد الخطوط الأفقية
             for (let i = 0; i <= gridRows; i++) {
                 const y = (height / gridRows) * i;
                 ctx.beginPath();
@@ -252,7 +252,6 @@
 
             if (ecgData.length < 2) return;
 
-            // حساب الحدود
             let minVal = Math.min(...ecgData);
             let maxVal = Math.max(...ecgData);
             if (maxVal - minVal < 100) { maxVal += 50; minVal -= 50; }
@@ -260,9 +259,9 @@
             const scaleY = height / range;
             const offsetY = minVal;
 
-            // رسم خط ECG باللون الأحمر
-            ctx.strokeStyle = '#ff3333';   // أحمر
-            ctx.lineWidth = 3.0;           // أسمك قليلاً
+            // خط ECG أحمر
+            ctx.strokeStyle = '#ff3333';
+            ctx.lineWidth = 3.0;
             ctx.shadowColor = '#ff3333';
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -275,24 +274,20 @@
                 else ctx.lineTo(x, y);
             });
             ctx.stroke();
-            ctx.shadowBlur = 0; // إعادة التوهج للصفر
+            ctx.shadowBlur = 0;
 
-            // تحليل قوة الإشارة
             analyzeSignal();
         }
 
-        // ========== تحليل قوة الإشارة ==========
         function analyzeSignal() {
             if (ecgData.length < 50) {
                 signalStrength.innerHTML = '<span style="color:#888;">جاري التحليل…</span>';
                 return;
             }
-            // آخر 100 نقطة أو كل البيانات إذا كانت أقل
             const sample = ecgData.slice(-100);
             const max = Math.max(...sample);
             const min = Math.min(...sample);
             const amplitude = max - min;
-
             if (amplitude > 200) {
                 signalStrength.innerHTML = '<span style="color:#00ff88;">قوية ✅</span>';
             } else if (amplitude > 50) {
@@ -302,7 +297,6 @@
             }
         }
 
-        // ========== تحديث واجهة المستخدم ==========
         function updateUI(ecg, bpm, status) {
             currentBpm = bpm;
             bpmDisplay.textContent = bpm || '--';
@@ -327,13 +321,11 @@
             const dateStr = now.toLocaleDateString('ar-EG');
             const timeStr = now.toLocaleTimeString('ar-EG');
             const state = (status === 'connected') ? 'موصول' : 'مفصول';
-
             const row = document.createElement('tr');
             row.innerHTML = `<td>${dateStr}</td><td>${timeStr}</td><td>${bpm || '--'}</td><td>${state}</td>`;
             if (tableBody.querySelector('.no-data')) tableBody.innerHTML = '';
             tableBody.prepend(row);
             if (tableBody.children.length > 50) tableBody.removeChild(tableBody.lastChild);
-
             localRecords.push({ date: dateStr, time: timeStr, bpm: bpm || 0, status: status });
             if (localRecords.length > 200) localRecords.shift();
         }
@@ -357,7 +349,6 @@
             document.body.removeChild(a);
         }
 
-        // ========== Firebase Listener ==========
         const patientRef = database.ref('/patient');
         patientRef.on('value', (snapshot) => {
             const data = snapshot.val();
