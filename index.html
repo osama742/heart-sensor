@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مراقبة القلب - Heart Sensor</title>
-    
-    <!-- Firebase SDK (compat) -->
+
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -20,7 +20,7 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: auto;
         }
         h1 {
@@ -47,7 +47,7 @@
             gap: 20px;
             justify-content: center;
         }
-        .bpm-box {
+        .bpm-box, .status-box {
             background: #1a2634;
             border-radius: 12px;
             padding: 20px;
@@ -56,13 +56,6 @@
         }
         .bpm-label { font-size: 1em; color: #888; }
         .bpm-value { font-size: 4em; font-weight: bold; color: #00ff88; margin: 10px 0; }
-        .status-box {
-            background: #1a2634;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            min-width: 150px;
-        }
         .status-indicator {
             width: 20px; height: 20px; border-radius: 50%; display: inline-block;
             margin-left: 8px; vertical-align: middle;
@@ -77,7 +70,7 @@
         }
         canvas {
             width: 100%;
-            height: 250px;
+            height: 280px; /* أطول قليلاً */
             display: block;
             border-radius: 8px;
         }
@@ -111,20 +104,23 @@
         button:hover { background: #00b4d8; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
         .table-container {
-            max-height: 300px;
+            max-height: 500px; /* أكبر */
             overflow-y: auto;
             margin-top: 15px;
+            border: 1px solid #2a3644;
+            border-radius: 8px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 1.1em; /* خط أكبر */
         }
         th, td {
-            padding: 10px;
+            padding: 12px 10px;
             border-bottom: 1px solid #2a3644;
             text-align: center;
         }
-        th { background: #1a2634; color: #00d4ff; }
+        th { background: #1a2634; color: #00d4ff; position: sticky; top: 0; }
         .no-data { text-align: center; color: #666; padding: 30px; }
         @media print {
             button, .table-container, .subtitle, .no-print { display: none; }
@@ -138,7 +134,7 @@
     <div class="container">
         <h1>🫀 مراقبة نبض القلب</h1>
         <p class="subtitle" id="connectionStatus">جاري الاتصال بقاعدة البيانات...</p>
-        
+
         <div class="panel">
             <div class="row">
                 <div class="bpm-box">
@@ -159,7 +155,7 @@
         <div class="panel">
             <div class="canvas-container">
                 <canvas id="ecgCanvas"></canvas>
-                <div class="ecg-speed">25 mm/s</div>
+                <div class="ecg-speed">25 mm/s | كل خط = 30 ثانية</div>
             </div>
             <div class="buttons no-print">
                 <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
@@ -172,10 +168,10 @@
             <div class="table-container" id="tableContainer">
                 <table>
                     <thead>
-                        <tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>النتيجة</th><th>الثقة</th></tr>
+                        <tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>الحالة</th></tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr class="no-data"><td colspan="5">لا توجد سجلات</td></tr>
+                        <tr class="no-data"><td colspan="4">لا توجد سجلات</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -183,16 +179,15 @@
     </div>
 
     <script>
-        // ========== إعدادات Firebase (متطابقة مع كود ESP32) ==========
+        // ========== إعدادات Firebase ==========
         const firebaseConfig = {
             apiKey: "AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
             databaseURL: "https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app"
         };
-
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // ========== المتغيرات العامة ==========
+        // ========== المتغيرات ==========
         const ecgCanvas = document.getElementById('ecgCanvas');
         const ctx = ecgCanvas.getContext('2d');
         const bpmDisplay = document.getElementById('bpmDisplay');
@@ -201,16 +196,15 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const tableBody = document.getElementById('tableBody');
 
-        // مصفوفة لتخزين آخر 200 قيمة للإشارة (الرسم)
-        const MAX_POINTS = 200;
+        // زيادة عدد النقاط لـ 600 (10 دقائق بافتراض إرسال كل 1 ثانية)
+        const MAX_POINTS = 600;
         let ecgData = [];
 
-        // متغيرات الرسم
         let width, height;
         function resizeCanvas() {
             const container = ecgCanvas.parentElement;
             ecgCanvas.width = container.clientWidth - 20;
-            ecgCanvas.height = 250;
+            ecgCanvas.height = 280;
             width = ecgCanvas.width;
             height = ecgCanvas.height;
         }
@@ -220,19 +214,14 @@
         });
         resizeCanvas();
 
-        // متغيرات معالجة البيانات
-        let lastEcg = 0;
         let currentBpm = 0;
-        let isConnected = false;
-
-        // سجل محلي لحفظ البيانات (للجدول والتصدير)
         let localRecords = [];
 
-        // ========== دالة الرسم على Canvas ==========
+        // ========== الرسم على Canvas ==========
         function drawChart() {
             ctx.clearRect(0, 0, width, height);
 
-            // رسم شبكة
+            // شبكة أفقية
             ctx.strokeStyle = '#1a3a2a';
             ctx.lineWidth = 0.5;
             const gridRows = 5;
@@ -243,7 +232,11 @@
                 ctx.lineTo(width, y);
                 ctx.stroke();
             }
-            const gridCols = 10;
+
+            // شبكة عمودية (20 عمود) – تقسيم واضح للوقت
+            const gridCols = 20; // تمت الزيادة
+            ctx.strokeStyle = '#2a4a3a';
+            ctx.lineWidth = 0.8;
             for (let i = 0; i <= gridCols; i++) {
                 const x = (width / gridCols) * i;
                 ctx.beginPath();
@@ -254,7 +247,7 @@
 
             if (ecgData.length < 2) return;
 
-            // حساب الحدود (مع هوامش)
+            // حساب الحدود
             let minVal = Math.min(...ecgData);
             let maxVal = Math.max(...ecgData);
             if (maxVal - minVal < 100) { maxVal += 50; minVal -= 50; }
@@ -262,7 +255,7 @@
             const scaleY = height / range;
             const offsetY = minVal;
 
-            // رسم الخط
+            // رسم خط ECG
             ctx.strokeStyle = '#00ff88';
             ctx.lineWidth = 2.5;
             ctx.shadowColor = '#00ff88';
@@ -276,58 +269,47 @@
                 if (index === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
-
             ctx.stroke();
-            ctx.shadowBlur = 0; // إلغاء التوهج بعد الرسم
+            ctx.shadowBlur = 0;
         }
 
         // ========== تحديث واجهة المستخدم ==========
         function updateUI(ecg, bpm, status) {
-            // تحديث BPM
             currentBpm = bpm;
-            bpmDisplay.textContent = bpm ? bpm : '--';
-
-            // تحديث الحالة
-            isConnected = (status === 'connected');
+            bpmDisplay.textContent = bpm || '--';
+            const isConnected = (status === 'connected');
             signalStatus.textContent = isConnected ? 'موصول' : 'مفصول';
             statusDot.className = 'status-indicator ' + (isConnected ? 'connected' : 'disconnected');
 
-            // إضافة إلى بيانات الرسم
             if (ecg !== undefined && ecg !== null) {
                 ecgData.push(ecg);
                 if (ecgData.length > MAX_POINTS) ecgData.shift();
-                lastEcg = ecg;
             }
 
             drawChart();
 
-            // تحديث السجل (كل 10 نقاط أو عند تغير النبض)
-            if (ecgData.length % 10 === 0 || bpm !== currentBpm) {
+            // أضف سجل كل 10 ثوان تقريباً
+            if (ecgData.length % 10 === 0) {
                 addRecord(bpm, status);
             }
         }
 
-        // ========== إضافة سجل للجدول ==========
         function addRecord(bpm, status) {
             const now = new Date();
             const dateStr = now.toLocaleDateString('ar-EG');
             const timeStr = now.toLocaleTimeString('ar-EG');
-            const result = (status === 'connected') ? 'طبيعي' : 'مفصول';
-            const confidence = (status === 'connected') ? (bpm ? 'عالية' : 'متوسطة') : 'لا توجد';
+            const state = (status === 'connected') ? 'موصول' : 'مفصول';
 
-            // إضافة للجدول
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${dateStr}</td><td>${timeStr}</td><td>${bpm || '--'}</td><td>${result}</td><td>${confidence}</td>`;
+            row.innerHTML = `<td>${dateStr}</td><td>${timeStr}</td><td>${bpm || '--'}</td><td>${state}</td>`;
             if (tableBody.querySelector('.no-data')) tableBody.innerHTML = '';
             tableBody.prepend(row);
             if (tableBody.children.length > 50) tableBody.removeChild(tableBody.lastChild);
 
-            // إضافة للسجل المحلي (للتصدير)
             localRecords.push({ date: dateStr, time: timeStr, bpm: bpm || 0, status: status });
             if (localRecords.length > 200) localRecords.shift();
         }
 
-        // ========== تصدير CSV ==========
         function downloadCSV() {
             if (localRecords.length === 0) {
                 alert('لا توجد بيانات لحفظها');
@@ -347,26 +329,20 @@
             document.body.removeChild(a);
         }
 
-        // ========== الاتصال بـ Firebase وتلقي البيانات ==========
+        // ========== Firebase Listener ==========
         const patientRef = database.ref('/patient');
-
         patientRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const ecg = data.ecg_value;
-                const bpm = data.bpm;
-                const status = data.status || (ecg ? 'connected' : 'disconnected');
-                updateUI(ecg, bpm, status);
+                updateUI(data.ecg_value, data.bpm, data.status || 'connected');
                 connectionStatus.textContent = '✅ متصل بقاعدة البيانات';
             } else {
-                connectionStatus.textContent = '⚠️ لا توجد بيانات حالياً من المستشعر';
+                connectionStatus.textContent = '⚠️ لا توجد بيانات من المستشعر';
             }
         }, (error) => {
-            connectionStatus.textContent = '❌ خطأ في الاتصال بقاعدة البيانات';
-            console.error(error);
+            connectionStatus.textContent = '❌ خطأ في الاتصال';
         });
 
-        // تحديث أولي
         resizeCanvas();
     </script>
 </body>
