@@ -47,15 +47,16 @@
             gap: 20px;
             justify-content: center;
         }
-        .bpm-box, .status-box {
+        .bpm-box, .status-box, .analysis-box {
             background: #1a2634;
             border-radius: 12px;
             padding: 20px;
             text-align: center;
             min-width: 150px;
         }
-        .bpm-label { font-size: 1em; color: #888; }
+        .bpm-label, .analysis-label { font-size: 1em; color: #888; }
         .bpm-value { font-size: 4em; font-weight: bold; color: #00ff88; margin: 10px 0; }
+        .analysis-value { font-size: 1.8em; font-weight: bold; margin: 10px 0; }
         .status-indicator {
             width: 20px; height: 20px; border-radius: 50%; display: inline-block;
             margin-left: 8px; vertical-align: middle;
@@ -70,7 +71,7 @@
         }
         canvas {
             width: 100%;
-            height: 280px; /* أطول قليلاً */
+            height: 350px; /* زدنا الارتفاع للتكبير */
             display: block;
             border-radius: 8px;
         }
@@ -104,7 +105,7 @@
         button:hover { background: #00b4d8; transform: scale(1.02); }
         button:active { transform: scale(0.98); }
         .table-container {
-            max-height: 500px; /* أكبر */
+            max-height: 500px;
             overflow-y: auto;
             margin-top: 15px;
             border: 1px solid #2a3644;
@@ -113,7 +114,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 1.1em; /* خط أكبر */
+            font-size: 1.1em;
         }
         th, td {
             padding: 12px 10px;
@@ -143,11 +144,15 @@
                     <div>نبضة/دقيقة</div>
                 </div>
                 <div class="status-box">
-                    <div>حالة الإشارة</div>
+                    <div>حالة الإشارة (توصيل)</div>
                     <h2 id="signalStatus">
                         <span class="status-indicator" id="statusDot"></span>
                         <span id="statusText">--</span>
                     </h2>
+                </div>
+                <div class="analysis-box">
+                    <div class="analysis-label">تحليل قوة الإشارة</div>
+                    <div class="analysis-value" id="signalStrength">--</div>
                 </div>
             </div>
         </div>
@@ -195,8 +200,8 @@
         const statusDot = document.getElementById('statusDot');
         const connectionStatus = document.getElementById('connectionStatus');
         const tableBody = document.getElementById('tableBody');
+        const signalStrength = document.getElementById('signalStrength');
 
-        // زيادة عدد النقاط لـ 600 (10 دقائق بافتراض إرسال كل 1 ثانية)
         const MAX_POINTS = 600;
         let ecgData = [];
 
@@ -204,7 +209,7 @@
         function resizeCanvas() {
             const container = ecgCanvas.parentElement;
             ecgCanvas.width = container.clientWidth - 20;
-            ecgCanvas.height = 280;
+            ecgCanvas.height = 350; // أكبر من قبل
             width = ecgCanvas.width;
             height = ecgCanvas.height;
         }
@@ -233,8 +238,8 @@
                 ctx.stroke();
             }
 
-            // شبكة عمودية (20 عمود) – تقسيم واضح للوقت
-            const gridCols = 20; // تمت الزيادة
+            // شبكة عمودية (20 عمود)
+            const gridCols = 20;
             ctx.strokeStyle = '#2a4a3a';
             ctx.lineWidth = 0.8;
             for (let i = 0; i <= gridCols; i++) {
@@ -255,11 +260,11 @@
             const scaleY = height / range;
             const offsetY = minVal;
 
-            // رسم خط ECG
-            ctx.strokeStyle = '#00ff88';
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = '#00ff88';
-            ctx.shadowBlur = 6;
+            // رسم خط ECG باللون الأحمر
+            ctx.strokeStyle = '#ff3333';   // أحمر
+            ctx.lineWidth = 3.0;           // أسمك قليلاً
+            ctx.shadowColor = '#ff3333';
+            ctx.shadowBlur = 8;
             ctx.beginPath();
 
             const stepX = width / (MAX_POINTS - 1);
@@ -270,7 +275,31 @@
                 else ctx.lineTo(x, y);
             });
             ctx.stroke();
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur = 0; // إعادة التوهج للصفر
+
+            // تحليل قوة الإشارة
+            analyzeSignal();
+        }
+
+        // ========== تحليل قوة الإشارة ==========
+        function analyzeSignal() {
+            if (ecgData.length < 50) {
+                signalStrength.innerHTML = '<span style="color:#888;">جاري التحليل…</span>';
+                return;
+            }
+            // آخر 100 نقطة أو كل البيانات إذا كانت أقل
+            const sample = ecgData.slice(-100);
+            const max = Math.max(...sample);
+            const min = Math.min(...sample);
+            const amplitude = max - min;
+
+            if (amplitude > 200) {
+                signalStrength.innerHTML = '<span style="color:#00ff88;">قوية ✅</span>';
+            } else if (amplitude > 50) {
+                signalStrength.innerHTML = '<span style="color:#ffaa00;">متوسطة ⚠️</span>';
+            } else {
+                signalStrength.innerHTML = '<span style="color:#ff4d4d;">ضعيفة ❌</span>';
+            }
         }
 
         // ========== تحديث واجهة المستخدم ==========
@@ -288,7 +317,6 @@
 
             drawChart();
 
-            // أضف سجل كل 10 ثوان تقريباً
             if (ecgData.length % 10 === 0) {
                 addRecord(bpm, status);
             }
