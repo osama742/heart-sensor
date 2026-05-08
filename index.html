@@ -1,225 +1,373 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heart Sensor - مراقبة القلب</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root{--bg:#f0f2f5;--card:#fff;--border:#d1d5db;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--text:#1f2937;--dim:#6b7280;--mono:'IBM Plex Mono',monospace;--arabic:'Tajawal',sans-serif}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font-family:var(--arabic);min-height:100vh}
-    .header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:#fff;border-bottom:2px solid #e5e7eb;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-    .logo{font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green);display:flex;align-items:center;gap:8px}
-    .logo span{font-weight:400;font-size:11px;color:var(--dim)}
-    .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);font-family:var(--mono)}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-    .dot.warn{background:var(--orange);animation:none}
-    .dot.danger{background:var(--red);animation:none}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .grid{display:grid;grid-template-columns:1fr;gap:16px;padding:20px 24px;max-width:1200px;margin:0 auto}
-    .row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-    @media(max-width:768px){.row2{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .card-label{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:12px;font-weight:600}
-    .chart-wrap{height:350px;background:#fafafa;border-radius:12px;border:1px solid #e5e7eb;padding:6px}
-    canvas{width:100%!important;height:100%!important}
-    .bpm-block{text-align:center;padding:8px 0}
-    .bpm-num{font-family:var(--mono);font-size:80px;font-weight:700;line-height:1;color:var(--dim)}
-    .bpm-sub{font-size:12px;color:var(--dim);margin-top:4px}
-    .diag-badge{display:block;padding:10px 16px;border-radius:24px;font-weight:700;font-size:13px;text-align:center;width:100%}
-    .diag-detail{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7;background:#f9fafb;padding:10px;border-radius:8px;font-family:var(--mono);white-space:pre-line}
-    .btn{display:block;width:100%;padding:11px 14px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:var(--arabic);margin-top:8px;text-align:center}
-    .btn-start{background:var(--green);color:#fff}
-    .btn-start:hover{background:#15803d}
-    .btn-start.on{background:var(--red)}
-    .btn-mute{background:#fef2f2;color:var(--red);border-color:#fecaca;display:none}
-    .btn-print{background:#f3f4f6;color:var(--dim);border-color:var(--border)}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th{padding:10px 8px;text-align:right;color:var(--dim);font-weight:600;font-size:10px;letter-spacing:.5px;border-bottom:2px solid #e5e7eb}
-    td{padding:10px 8px;border-bottom:1px solid #f3f4f6;color:var(--text)}
-    .alarm-flash{animation:alarmPulse .55s infinite}
-    @keyframes alarmPulse{0%,100%{box-shadow:inset 0 0 0px rgba(220,38,38,0)}50%{box-shadow:inset 0 0 60px rgba(220,38,38,.15)}}
-    @media print{body{background:#fff!important}.header,.btn,.no-print{display:none!important}.card{box-shadow:none;border:1px solid #ccc}.chart-wrap{height:300px}}
-    #beatFlash { transition: background-color 0.1s; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مراقبة القلب - Heart Sensor</title>
+    
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            direction: rtl;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 5px;
+            font-size: 2.2em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: #121a24;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .bpm-box {
+            background: #1a2634;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+        }
+        .bpm-label { font-size: 1em; color: #888; }
+        .bpm-value { font-size: 4em; font-weight: bold; color: #00ff88; margin: 10px 0; }
+        .status-box {
+            background: #1a2634;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+        }
+        .status-indicator {
+            width: 20px; height: 20px; border-radius: 50%; display: inline-block;
+            margin-left: 8px; vertical-align: middle;
+        }
+        .connected { background: #00ff88; }
+        .disconnected { background: #ff4d4d; }
+        .canvas-container {
+            background: #000;
+            border-radius: 12px;
+            padding: 10px;
+            position: relative;
+        }
+        canvas {
+            width: 100%;
+            height: 250px;
+            display: block;
+            border-radius: 8px;
+        }
+        .ecg-speed {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            color: #aaa;
+            font-size: 0.8em;
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button:hover { background: #00b4d8; transform: scale(1.02); }
+        button:active { transform: scale(0.98); }
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #2a3644;
+            text-align: center;
+        }
+        th { background: #1a2634; color: #00d4ff; }
+        .no-data { text-align: center; color: #666; padding: 30px; }
+        @media print {
+            button, .table-container, .subtitle, .no-print { display: none; }
+            .canvas-container { box-shadow: none; }
+            body { background: white; color: black; }
+            .bpm-value { color: black; }
+        }
+    </style>
 </head>
 <body>
-
-<header class="header">
-  <div class="logo">🫀 HEART SENSOR <span>| مراقبة القلب</span></div>
-  <div class="status"><div class="dot" id="led"></div><span id="ledText">جاري الاتصال…</span></div>
-</header>
-
-<main class="grid" id="dash">
-  <div class="card" id="beatFlash">
-    <div class="card-label">تخطيط القلب — 25 mm/s</div>
-    <div class="chart-wrap"><canvas id="ecgCanvas"></canvas></div>
-    <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px" id="debugInfo">⚡ في انتظار البيانات...</div>
-  </div>
-
-  <div class="row2">
-    <div class="card">
-      <div class="card-label">معدل ضربات القلب</div>
-      <div class="bpm-block"><div class="bpm-num" id="bpmDisp">---</div><div class="bpm-sub">نبضة / دقيقة</div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">حالة الإشارة</div>
-      <div style="text-align:center;padding:20px 0;font-size:40px" id="signalIcon">🫀</div>
-      <div style="text-align:center;font-weight:700;font-size:14px" id="signalText">متصل</div>
-    </div>
-    <div class="card">
-      <div class="card-label">تحليل الذكاء الاصطناعي</div>
-      <div class="diag-badge" id="diagBadge" style="background:#f3f4f6;color:var(--dim)">لا توجد إشارة</div>
-      <div class="diag-detail" id="diagDetail">بانتظار بيانات ECG…</div>
-      <button class="btn btn-start" id="btnMon" onclick="toggleMon()">▶ بدء المراقبة</button>
-      <button class="btn btn-mute" id="btnMute" onclick="toggleMute()">🔇 كتم الصوت</button>
-    </div>
-  </div>
-
-  <div class="card no-print">
-    <div class="card-label">سجل المريض</div>
-    <table><thead><tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>النتيجة</th><th>الثقة</th></tr></thead><tbody id="histBody"><tr><td colspan="5" style="color:var(--dim)">لا توجد سجلات</td></tr></tbody></table>
-    <button class="btn btn-print" onclick="window.print()" style="margin-top:12px">🖨 طباعة التخطيط</button>
-  </div>
-</main>
-
-<script>
-(function(){
-  firebase.initializeApp({
-    apiKey:"AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
-    authDomain:"sensor-7042b.firebaseapp.com",
-    databaseURL:"https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId:"sensor-7042b"
-  });
-  const rtdb=firebase.database();
-
-  const FS=5, MAX=500;
-  let buf=[], mon=false, muted=false, audioCtx=null, smBpm=null, alarmT=null;
-  let beatCount=0, beatWindowStart=0;
-  const $=id=>document.getElementById(id);
-
-  const ctx=$('ecgCanvas').getContext('2d');
-  const chart=new Chart(ctx,{
-    type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#dc2626',borderWidth:1.8,tension:0,pointRadius:0,fill:false}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
-      scales:{x:{display:true,grid:{color:'#e5e7eb'}},y:{min:1650,max:2100,grid:{color:'#e5e7eb'},ticks:{stepSize:50}}},
-      plugins:{legend:{display:false}}
-    }
-  });
-
-  // أبسط وأقوى خوارزمية BPM: تعتمد على تغير الإشارة فقط
-  let lastVal = 0;
-  let rising = false;
-  let beatDetected = false;
-  const PEAK_THRESH = 15; // الحد الأدنى للتغير الذي نعتبره "نبضة"
-
-  rtdb.ref('/patient').on('value', snap => {
-    const d = snap.val();
-    if (!d) return;
-    const v = d.ecg_value ?? 0, s = d.status ?? 'disconnected';
-    $('#debugInfo').textContent = `ECG: ${v} | الحالة: ${s} | نبضات مكتشفة: ${beatCount}`;
-
-    if (s === 'ok' && v > 0) {
-      $('#led').className='dot'; $('#ledText').textContent='متصل — مباشر';
-      $('#signalIcon').style.opacity=1; $('#signalText').textContent='متصل'; $('#signalText').style.color='var(--green)';
-    } else {
-      $('#led').className='dot warn'; $('#ledText').textContent='الأقطاب منفصلة';
-      $('#signalIcon').style.opacity=0.4; $('#signalText').textContent='منفصل'; $('#signalText').style.color='var(--red)';
-      if (mon) setDiag('NO_SIGNAL');
-      return;
-    }
-
-    buf.push(v); if (buf.length > MAX) buf.shift();
-    chart.data.datasets[0].data = [...buf];
-    chart.update('none');
-
-    // اكتشاف النبضات بطريقة بسيطة جداً
-    if (mon && s === 'ok') {
-      // اكتشاف ارتفاع الإشارة (rising edge)
-      if (v > lastVal + PEAK_THRESH && !rising) {
-        rising = true;
-      }
-      // اكتشاف قمة (بعد أن كانت ترتفع، بدأت تنخفض)
-      if (rising && v < lastVal) {
-        beatCount++;
-        rising = false;
+    <div class="container">
+        <h1>🫀 مراقبة نبض القلب</h1>
+        <p class="subtitle" id="connectionStatus">جاري الاتصال بقاعدة البيانات...</p>
         
-        // وميض بصري عند كل نبضة
-        $('#beatFlash').style.backgroundColor = '#fef2f2';
-        setTimeout(() => { $('#beatFlash').style.backgroundColor = ''; }, 150);
-      }
-      lastVal = v;
+        <div class="panel">
+            <div class="row">
+                <div class="bpm-box">
+                    <div class="bpm-label">معدل النبض</div>
+                    <div class="bpm-value" id="bpmDisplay">--</div>
+                    <div>نبضة/دقيقة</div>
+                </div>
+                <div class="status-box">
+                    <div>حالة الإشارة</div>
+                    <h2 id="signalStatus">
+                        <span class="status-indicator" id="statusDot"></span>
+                        <span id="statusText">--</span>
+                    </h2>
+                </div>
+            </div>
+        </div>
 
-      // حساب BPM كل 3 ثوانٍ
-      if (!beatWindowStart) beatWindowStart = Date.now();
-      if (Date.now() - beatWindowStart >= 3000) {
-        const seconds = (Date.now() - beatWindowStart) / 1000;
-        const bpm = Math.round((beatCount / seconds) * 60);
-        if (bpm >= 25 && bpm <= 220) {
-          smBpm = smBpm ? Math.round(smBpm * 0.5 + bpm * 0.5) : bpm;
-          $('#bpmDisp').textContent = smBpm;
-          if (smBpm >= 60 && smBpm <= 100) $('#bpmDisp').style.color = 'var(--green)';
-          else if ((smBpm >= 50 && smBpm < 60) || (smBpm > 100 && smBpm <= 120)) $('#bpmDisp').style.color = 'var(--orange)';
-          else $('#bpmDisp').style.color = 'var(--red)';
-          setDiag(null);
+        <div class="panel">
+            <div class="canvas-container">
+                <canvas id="ecgCanvas"></canvas>
+                <div class="ecg-speed">25 mm/s</div>
+            </div>
+            <div class="buttons no-print">
+                <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+                <button onclick="downloadCSV()">💾 حفظ البيانات (CSV)</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-bottom:15px;">📋 سجل القياسات</h3>
+            <div class="table-container" id="tableContainer">
+                <table>
+                    <thead>
+                        <tr><th>التاريخ</th><th>الوقت</th><th>النبض</th><th>النتيجة</th><th>الثقة</th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr class="no-data"><td colspan="5">لا توجد سجلات</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== إعدادات Firebase (متطابقة مع كود ESP32) ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRDYiPRERG5ouSm1bXCYYkEQAnj3X15Ts",
+            databaseURL: "https://sensor-7042b-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ========== المتغيرات العامة ==========
+        const ecgCanvas = document.getElementById('ecgCanvas');
+        const ctx = ecgCanvas.getContext('2d');
+        const bpmDisplay = document.getElementById('bpmDisplay');
+        const signalStatus = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const tableBody = document.getElementById('tableBody');
+
+        // مصفوفة لتخزين آخر 200 قيمة للإشارة (الرسم)
+        const MAX_POINTS = 200;
+        let ecgData = [];
+
+        // متغيرات الرسم
+        let width, height;
+        function resizeCanvas() {
+            const container = ecgCanvas.parentElement;
+            ecgCanvas.width = container.clientWidth - 20;
+            ecgCanvas.height = 250;
+            width = ecgCanvas.width;
+            height = ecgCanvas.height;
         }
-        beatCount = 0;
-        beatWindowStart = Date.now();
-      }
-    } else {
-      lastVal = v;
-    }
-  });
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawChart();
+        });
+        resizeCanvas();
 
-  function setDiag(ov) {
-    if (!mon) return;
-    let l, c, bg, dt;
-    if (ov === 'NO_SIGNAL' || !smBpm) { l='لا توجد إشارة'; c='var(--dim)'; bg='#f3f4f6'; dt='⚠ المستشعر منفصل.'; alarm(true); }
-    else if (smBpm >= 60 && smBpm <= 100) { l='إيقاع جيبي طبيعي'; c='var(--green)'; bg='#f0fdf4'; dt=`✓ إيقاع منتظم: ${smBpm} نبضة/دقيقة.`; alarm(false); }
-    else if (smBpm > 40 && smBpm < 50) { l='بطء قلب جيبي'; c='var(--orange)'; bg='#fff7ed'; dt=`⚠ معدل منخفض: ${smBpm}.`; alarm(true); }
-    else if (smBpm > 100 && smBpm <= 120) { l='تسرع قلب جيبي'; c='var(--orange)'; bg='#fff7ed'; dt=`⚠ معدل مرتفع: ${smBpm}.`; alarm(true); }
-    else if (smBpm > 120) { l='⚠ اضطراب نظم القلب'; c='var(--red)'; bg='#fef2f2'; dt=`⚠ تسرع غير طبيعي: ${smBpm}.`; alarm(true); }
-    else { l='جاري التحليل…'; c='var(--orange)'; bg='#fffbeb'; dt='جمع البيانات…'; alarm(false); }
-    $('#diagBadge').textContent=l; $('#diagBadge').style.color=c; $('#diagBadge').style.background=bg; $('#diagDetail').textContent=dt;
-  }
+        // متغيرات معالجة البيانات
+        let lastEcg = 0;
+        let currentBpm = 0;
+        let isConnected = false;
 
-  function alarm(on) { $('#dash').classList.toggle('alarm-flash', on); if (on && !muted) beep(); else if (!on) { if (alarmT) clearTimeout(alarmT); if (audioCtx) audioCtx.suspend(); } }
-  function beep() {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = 'square'; o.frequency.value = 880; g.gain.value = 0.2;
-      o.connect(g); g.connect(audioCtx.destination); o.start(); setTimeout(() => o.stop(), 120);
-      alarmT = setTimeout(() => { if ($('#dash').classList.contains('alarm-flash')) beep(); }, 350);
-    } catch (e) {}
-  }
+        // سجل محلي لحفظ البيانات (للجدول والتصدير)
+        let localRecords = [];
 
-  window.toggleMon = function() {
-    mon = !mon;
-    if (mon) {
-      $('#btnMon').textContent = '⏸ إيقاف المراقبة'; $('#btnMon').classList.add('on'); $('#btnMute').style.display = 'block';
-      beatCount = 0; beatWindowStart = Date.now(); smBpm = null; lastVal = 0; rising = false;
-      $('#bpmDisp').textContent = '---'; $('#bpmDisp').style.color = 'var(--dim)';
-    } else {
-      $('#btnMon').textContent = '▶ بدء المراقبة'; $('#btnMon').classList.remove('on'); $('#btnMute').style.display = 'none';
-      $('#dash').classList.remove('alarm-flash'); if (alarmT) clearTimeout(alarmT); if (audioCtx) audioCtx.suspend();
-      smBpm = null; $('#bpmDisp').textContent = '---';
-    }
-  };
+        // ========== دالة الرسم على Canvas ==========
+        function drawChart() {
+            ctx.clearRect(0, 0, width, height);
 
-  window.toggleMute = function() { muted = !muted; $('#btnMute').textContent = muted ? '🔊 إلغاء الكتم' : '🔇 كتم الصوت'; };
+            // رسم شبكة
+            ctx.strokeStyle = '#1a3a2a';
+            ctx.lineWidth = 0.5;
+            const gridRows = 5;
+            for (let i = 0; i <= gridRows; i++) {
+                const y = (height / gridRows) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            const gridCols = 10;
+            for (let i = 0; i <= gridCols; i++) {
+                const x = (width / gridCols) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
 
-  rtdb.ref('/patient_history').on('value', snap => {
-    const d = snap.val();
-    if (!d) { $('#histBody').innerHTML = '<tr><td colspan="5">لا توجد سجلات</td></tr>'; return; }
-    $('#histBody').innerHTML = Object.values(d).reverse().slice(0, 10).map(r => `<tr><td>${r.date||'--'}</td><td>${r.time||'--'}</td><td>${r.bpm||'--'}</td><td>${r.result||'--'}</td><td>${r.confidence||'--'}</td></tr>`).join('');
-  });
-})();
-</script>
+            if (ecgData.length < 2) return;
+
+            // حساب الحدود (مع هوامش)
+            let minVal = Math.min(...ecgData);
+            let maxVal = Math.max(...ecgData);
+            if (maxVal - minVal < 100) { maxVal += 50; minVal -= 50; }
+            const range = maxVal - minVal || 1;
+            const scaleY = height / range;
+            const offsetY = minVal;
+
+            // رسم الخط
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+
+            const stepX = width / (MAX_POINTS - 1);
+            ecgData.forEach((value, index) => {
+                const x = index * stepX;
+                const y = height - (value - offsetY) * scaleY;
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+
+            ctx.stroke();
+            ctx.shadowBlur = 0; // إلغاء التوهج بعد الرسم
+        }
+
+        // ========== تحديث واجهة المستخدم ==========
+        function updateUI(ecg, bpm, status) {
+            // تحديث BPM
+            currentBpm = bpm;
+            bpmDisplay.textContent = bpm ? bpm : '--';
+
+            // تحديث الحالة
+            isConnected = (status === 'connected');
+            signalStatus.textContent = isConnected ? 'موصول' : 'مفصول';
+            statusDot.className = 'status-indicator ' + (isConnected ? 'connected' : 'disconnected');
+
+            // إضافة إلى بيانات الرسم
+            if (ecg !== undefined && ecg !== null) {
+                ecgData.push(ecg);
+                if (ecgData.length > MAX_POINTS) ecgData.shift();
+                lastEcg = ecg;
+            }
+
+            drawChart();
+
+            // تحديث السجل (كل 10 نقاط أو عند تغير النبض)
+            if (ecgData.length % 10 === 0 || bpm !== currentBpm) {
+                addRecord(bpm, status);
+            }
+        }
+
+        // ========== إضافة سجل للجدول ==========
+        function addRecord(bpm, status) {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ar-EG');
+            const timeStr = now.toLocaleTimeString('ar-EG');
+            const result = (status === 'connected') ? 'طبيعي' : 'مفصول';
+            const confidence = (status === 'connected') ? (bpm ? 'عالية' : 'متوسطة') : 'لا توجد';
+
+            // إضافة للجدول
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${dateStr}</td><td>${timeStr}</td><td>${bpm || '--'}</td><td>${result}</td><td>${confidence}</td>`;
+            if (tableBody.querySelector('.no-data')) tableBody.innerHTML = '';
+            tableBody.prepend(row);
+            if (tableBody.children.length > 50) tableBody.removeChild(tableBody.lastChild);
+
+            // إضافة للسجل المحلي (للتصدير)
+            localRecords.push({ date: dateStr, time: timeStr, bpm: bpm || 0, status: status });
+            if (localRecords.length > 200) localRecords.shift();
+        }
+
+        // ========== تصدير CSV ==========
+        function downloadCSV() {
+            if (localRecords.length === 0) {
+                alert('لا توجد بيانات لحفظها');
+                return;
+            }
+            let csv = 'التاريخ,الوقت,النبض,الحالة\n';
+            localRecords.forEach(rec => {
+                csv += `${rec.date},${rec.time},${rec.bpm},${rec.status}\n`;
+            });
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `heart_data_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // ========== الاتصال بـ Firebase وتلقي البيانات ==========
+        const patientRef = database.ref('/patient');
+
+        patientRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const ecg = data.ecg_value;
+                const bpm = data.bpm;
+                const status = data.status || (ecg ? 'connected' : 'disconnected');
+                updateUI(ecg, bpm, status);
+                connectionStatus.textContent = '✅ متصل بقاعدة البيانات';
+            } else {
+                connectionStatus.textContent = '⚠️ لا توجد بيانات حالياً من المستشعر';
+            }
+        }, (error) => {
+            connectionStatus.textContent = '❌ خطأ في الاتصال بقاعدة البيانات';
+            console.error(error);
+        });
+
+        // تحديث أولي
+        resizeCanvas();
+    </script>
 </body>
 </html>
